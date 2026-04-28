@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from "react";
-import { API_BASE } from "../config";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { API_BASE, getDynamicQrRedirectBase } from "../config";
 import {
   getStickerOverlayUrl,
   isImageStickerId,
@@ -75,6 +75,8 @@ export function useQrGenerator() {
   const [previewWithSticker, setPreviewWithSticker] = useState("");
   const [saveQrSaving, setSaveQrSaving] = useState(false);
   const [saveQrMessage, setSaveQrMessage] = useState(null);
+  const [linkMode, setLinkMode] = useState("static");
+  const [publicSlug, setPublicSlug] = useState(null);
 
   const [qrInputs, setQrInputs] = useState({
     url: "https://example.com",
@@ -94,6 +96,8 @@ export function useQrGenerator() {
   });
 
   const handleQRTypeChange = (newType) => {
+    setLinkMode("static");
+    setPublicSlug(null);
     setQrType(newType);
     setQrValue(buildEncodedQrText(newType, qrInputs));
   };
@@ -239,20 +243,42 @@ export function useQrGenerator() {
     }
   };
 
+  const qrTextForEncode = useMemo(() => {
+    if (linkMode === "dynamic" && publicSlug) {
+      const base = getDynamicQrRedirectBase().replace(/\/$/, "");
+      const slug = String(publicSlug).trim().toLowerCase();
+      return `${base}/api/r/${slug}`;
+    }
+    const raw = String(qrValue || "").trim();
+    /* לפני שמירה אין slug — מוסיפים hash זמני כדי שה-QR ייראה שונה מסטטי; רוב האתרים מתעלמים מ-hash */
+    if (linkMode === "dynamic" && !publicSlug && raw) {
+      try {
+        const u = new URL(raw);
+        if (!u.hash || u.hash === "#") {
+          u.hash = "qrd";
+          return u.toString();
+        }
+      } catch {
+        /* לא URL מלא */
+      }
+    }
+    return raw;
+  }, [linkMode, publicSlug, qrValue]);
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (qrType === "pdf" && pdfInputMode === "file" && !qrInputs.pdf) {
         setQrImage("");
         return;
       }
-      generateQR(qrValue, fgColor, bgColor);
+      generateQR(qrTextForEncode, fgColor, bgColor);
     }, 400);
 
     return () => {
       clearTimeout(timeoutId);
     };
   }, [
-    qrValue,
+    qrTextForEncode,
     fgColor,
     bgColor,
     bgColorMode,
@@ -323,6 +349,7 @@ export function useQrGenerator() {
       qrType,
       qrValue: String(qrValue || "").trim(),
       displayName: nameExtra,
+      linkMode: qrType === "url" && linkMode === "dynamic" ? "dynamic" : "static",
       qrInputs,
       style: {
         fgColor,
@@ -342,6 +369,7 @@ export function useQrGenerator() {
   }, [
     qrType,
     qrValue,
+    linkMode,
     qrInputs,
     fgColor,
     bgColor,
@@ -361,8 +389,16 @@ export function useQrGenerator() {
     setError("");
     setSaveQrMessage(null);
     const st = doc.style && typeof doc.style === "object" ? doc.style : {};
+    setLinkMode(doc.linkMode === "dynamic" ? "dynamic" : "static");
+    setPublicSlug(doc.publicSlug || null);
     setQrType(doc.qrType || "url");
-    setQrInputs((prev) => mergeQrInputs(prev, doc.qrInputs || {}));
+    setQrInputs((prev) => {
+      const merged = mergeQrInputs(prev, doc.qrInputs || {});
+      if (doc.linkMode === "dynamic" && String(doc.dynamicTargetUrl || "").trim()) {
+        return { ...merged, url: String(doc.dynamicTargetUrl).trim() };
+      }
+      return merged;
+    });
     setQrValue(String(doc.qrValue ?? "").trim());
     setFgColor(st.fgColor ?? "#000000");
     setBgColor(st.bgColor ?? "#ffffff");
@@ -389,6 +425,13 @@ export function useQrGenerator() {
 
   const saveQr = useCallback(async (displayName) => {
     if (!qrImage) return false;
+    if (linkMode === "dynamic" && qrType === "url" && !publicSlug) {
+      const u = String(qrInputs?.url || "").trim();
+      if (!/^https?:\/\//i.test(u)) {
+        setSaveQrMessage("לקישור דינמי נדרש כתובת http או https תקינה");
+        return false;
+      }
+    }
     const nameTrim = String(displayName ?? "").trim();
     if (!nameTrim) {
       setSaveQrMessage("נא להזין שם לקוד");
@@ -412,6 +455,12 @@ export function useQrGenerator() {
       }
       if (res.ok) {
         window.dispatchEvent(new Event("qr-saved-updated"));
+        const saved = data?.saved;
+        if (saved?.linkMode === "dynamic" && saved?.publicSlug) {
+          setLinkMode("dynamic");
+          setPublicSlug(saved.publicSlug);
+          setQrValue("");
+        }
         setSaveQrMessage(
           data.updated ? "עודכן באוסף" : "נשמר לאוסף",
         );
@@ -450,7 +499,23 @@ export function useQrGenerator() {
     } finally {
       setSaveQrSaving(false);
     }
-  }, [qrImage, buildSavePayload, qrType]);
+  }, [
+    qrImage,
+    buildSavePayload,
+    qrType,
+    linkMode,
+    publicSlug,
+    qrInputs,
+  ]);
+
+  const handleLinkModeChange = useCallback((mode) => {
+    const m = mode === "dynamic" ? "dynamic" : "static";
+    setLinkMode(m);
+    if (m === "static") {
+      setPublicSlug(null);
+      setQrValue(buildEncodedQrText(qrType, qrInputs));
+    }
+  }, [qrType, qrInputs]);
 
   const downloadQR = useCallback(
     (format) => {
@@ -627,5 +692,10 @@ export function useQrGenerator() {
     saveQrSaving,
     saveQrMessage,
     applySavedQrPayload,
+    linkMode,
+    setLinkMode,
+    publicSlug,
+    setPublicSlug,
+    handleLinkModeChange,
   };
 }

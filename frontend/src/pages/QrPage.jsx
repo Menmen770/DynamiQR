@@ -76,6 +76,9 @@ function QrPage() {
     saveQrSaving,
     saveQrMessage,
     applySavedQrPayload,
+    linkMode,
+    handleLinkModeChange,
+    publicSlug,
   } = qr;
 
   useEffect(() => {
@@ -193,6 +196,9 @@ function QrPage() {
             saveQr={saveQr}
             saveQrSaving={saveQrSaving}
             saveQrMessage={saveQrMessage}
+            linkMode={linkMode}
+            handleLinkModeChange={handleLinkModeChange}
+            publicSlug={publicSlug}
           />
           </div>
         </div>

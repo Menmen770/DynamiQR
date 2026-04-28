@@ -114,7 +114,7 @@ function compositeStickerPreview(qrDataUrl, stickerType, fgColor) {
  */
 export async function getSavedQrPreviewDataUrl(row, apiBase) {
   const style = row?.style && typeof row.style === "object" ? row.style : {};
-  const text = effectiveSavedQrEncodedText(row);
+  const text = effectiveSavedQrEncodedText(row, apiBase);
   if (!text) return "";
 
   const fg = style.fgColor || "#000000";

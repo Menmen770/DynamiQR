@@ -1,3 +1,5 @@
+import { getDynamicQrRedirectBase } from "../config";
+
 /**
  * הטקסט שמקודד בפועל ב-QR (מקביל ל-buildQRValue במחולל).
  * משמש גם לתצוגה מקדימה של שמורים כש־qrValue ריק אבל יש qrInputs.
@@ -67,8 +69,17 @@ export function buildEncodedQrText(type, inputs) {
   }
 }
 
-/** טקסט לקידוד QR לשורה שמורה (שרת / כרטיס). */
-export function effectiveSavedQrEncodedText(row) {
+/**
+ * טקסט לקידוד QR לשורה שמורה (שרת / כרטיס).
+ * @param {object} row
+ * @param {string} [_apiBase] — לא בשימוש לקישור דינמי; ראה getDynamicQrRedirectBase / VITE_PUBLIC_QR_BASE
+ */
+export function effectiveSavedQrEncodedText(row, _apiBase = "") {
+  if (row?.linkMode === "dynamic" && row?.publicSlug) {
+    const base = getDynamicQrRedirectBase().replace(/\/$/, "");
+    const slug = String(row.publicSlug).trim().toLowerCase();
+    return `${base}/api/r/${slug}`;
+  }
   const fromValue = String(row?.qrValue || "").trim();
   if (fromValue) return fromValue;
   return String(
