@@ -88,23 +88,27 @@ function DashboardPage() {
     }, 4500);
   }, []);
 
+  const fetchSavedQrList = useCallback(async () => {
+    const qs = new URLSearchParams();
+    qs.set("limit", "50");
+    if (debouncedNameSearch) {
+      qs.set("q", debouncedNameSearch);
+    }
+    const res = await fetch(`${API_BASE}/api/saved-qrs?${qs.toString()}`, {
+      credentials: "include",
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.error || "טעינה נכשלה");
+    }
+    return Array.isArray(data.items) ? data.items : [];
+  }, [debouncedNameSearch]);
+
   const loadList = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const qs = new URLSearchParams();
-      qs.set("limit", "50");
-      if (debouncedNameSearch) {
-        qs.set("q", debouncedNameSearch);
-      }
-      const res = await fetch(`${API_BASE}/api/saved-qrs?${qs.toString()}`, {
-        credentials: "include",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || "טעינה נכשלה");
-      }
-      const list = Array.isArray(data.items) ? data.items : [];
+      const list = await fetchSavedQrList();
       setItems(list);
     } catch (e) {
       setError(e.message || "טעינה נכשלה");
@@ -112,11 +116,28 @@ function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [debouncedNameSearch]);
+  }, [fetchSavedQrList]);
+
+  const refreshListQuiet = useCallback(async () => {
+    try {
+      const list = await fetchSavedQrList();
+      setItems(list);
+    } catch {
+      /* ignore — רק רענון שקט אחרי סריקה / מודל */
+    }
+  }, [fetchSavedQrList]);
 
   useEffect(() => {
     loadList();
   }, [loadList]);
+
+  useEffect(() => {
+    const onSaved = () => {
+      void refreshListQuiet();
+    };
+    window.addEventListener("qr-saved-updated", onSaved);
+    return () => window.removeEventListener("qr-saved-updated", onSaved);
+  }, [refreshListQuiet]);
 
   useEffect(() => {
     let cancelled = false;
@@ -193,6 +214,11 @@ function DashboardPage() {
             qrValue: row.qrValue || "",
             qrInputs: row.qrInputs || {},
             style: row.style || {},
+            linkMode: row.linkMode,
+            publicSlug: row.publicSlug,
+            dynamicTargetUrl: row.dynamicTargetUrl,
+            redirectPaused: row.redirectPaused,
+            scanCount: row.scanCount,
           },
         },
       });
@@ -358,6 +384,7 @@ function DashboardPage() {
             onDelete={handleDelete}
             onStubNotice={showNotice}
             onSavedQrFromApi={handleSavedQrFromApi}
+            onListRefresh={refreshListQuiet}
             folderDisplayName={folderNameForRow(row)}
             foldersForSelect={folderState.folders}
             assignedFolderId={folderState.assignments[String(row._id)] ?? null}
@@ -369,7 +396,10 @@ function DashboardPage() {
   );
 
   return (
-    <div className="dashboard-page py-4 py-md-5" dir="rtl">
+    <div
+      className="dashboard-page dashboard-page--scroll-split py-4 py-md-5"
+      dir="rtl"
+    >
       <div className="container-fluid dashboard-layout px-3 px-md-4">
         <header className="dashboard-toolbar-strip mb-3 mb-md-4">
           <div className="dashboard-toolbar-hero">

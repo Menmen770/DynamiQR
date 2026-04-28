@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  FiChevronDown,
   FiClock,
   FiCopy,
   FiCornerUpLeft,
@@ -20,6 +19,7 @@ import {
 } from "../utils/savedQrPreview";
 import SimpleTextModal from "./SimpleTextModal";
 import SavedQrStyleEditModal from "./SavedQrStyleEditModal";
+import DynamicQrManageModal from "./DynamicQrManageModal";
 
 const QR_TYPE_LABELS = new Map(
   [...QR_TYPES_MAIN, ...QR_TYPES_MORE].map((t) => [t.value, t.label]),
@@ -38,6 +38,10 @@ function formatSavedDate(iso) {
 }
 
 function destinationSummary(row) {
+  if (row?.linkMode === "dynamic") {
+    const d = String(row?.dynamicTargetUrl || "").trim();
+    if (d) return d.length > 96 ? `${d.slice(0, 96)}…` : d;
+  }
   const v = String(row?.qrValue || "").trim();
   if (v) return v.length > 96 ? `${v.slice(0, 96)}…` : v;
   const inputs = row?.qrInputs;
@@ -66,6 +70,7 @@ export default function SavedQrCard({
   onDelete,
   onStubNotice,
   onSavedQrFromApi,
+  onListRefresh,
   folderDisplayName,
   foldersForSelect,
   assignedFolderId,
@@ -80,6 +85,13 @@ export default function SavedQrCard({
   const [renameBusy, setRenameBusy] = useState(false);
   const [styleEditOpen, setStyleEditOpen] = useState(false);
   const [activeBusy, setActiveBusy] = useState(false);
+  const [dynamicModalOpen, setDynamicModalOpen] = useState(false);
+  const [linkModeBusy, setLinkModeBusy] = useState(false);
+
+  const encodedInQr = useMemo(
+    () => String(effectiveSavedQrEncodedText(row, API_BASE) || "").trim(),
+    [row],
+  );
 
   useEffect(() => {
     if (!moveOpen) return;
@@ -93,6 +105,12 @@ export default function SavedQrCard({
   useEffect(() => {
     setMoveOpen(false);
   }, [row._id]);
+
+  useEffect(() => {
+    if (dynamicModalOpen && typeof onListRefresh === "function") {
+      void onListRefresh();
+    }
+  }, [dynamicModalOpen, onListRefresh]);
 
   useEffect(() => {
     let cancelled = false;
@@ -150,13 +168,58 @@ export default function SavedQrCard({
   const openEditor = () => onOpenEditor(row);
 
   const handleOpenDestination = useCallback(() => {
-    const t = effectiveSavedQrEncodedText(row);
+    if (row?.linkMode === "dynamic") {
+      const dest = String(row.dynamicTargetUrl || "").trim();
+      if (/^https?:\/\//i.test(dest)) {
+        window.open(dest, "_blank", "noopener,noreferrer");
+        return;
+      }
+    }
+    const t = effectiveSavedQrEncodedText(row, API_BASE);
     if (/^https?:\/\//i.test(t)) {
       window.open(t, "_blank", "noopener,noreferrer");
       return;
     }
     onOpenEditor(row);
   }, [row, onOpenEditor]);
+
+  const handleEditDestination = useCallback(() => {
+    if (row?.linkMode === "dynamic") {
+      setDynamicModalOpen(true);
+      return;
+    }
+    onOpenEditor(row);
+  }, [row, onOpenEditor]);
+
+  const handleEnableDynamic = useCallback(async () => {
+    if (row.linkMode === "dynamic" || row.qrType !== "url") return;
+    if (
+      !window.confirm(
+        "להפוך לקישור דינמי? יווצר קישור קצר חדש — הדפסות QR ישנות עם הכתובת הישירה לא יעודכנו אוטומטית.",
+      )
+    ) {
+      return;
+    }
+    setLinkModeBusy(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/saved-qrs/${row._id}`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ linkMode: "dynamic" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error || "הפעלה נכשלה");
+      }
+      if (data?.saved) onSavedQrFromApi(data.saved);
+      window.dispatchEvent(new Event("qr-saved-updated"));
+    } catch (e) {
+      onStubNotice(e.message || "הפעלה נכשלה");
+    } finally {
+      setLinkModeBusy(false);
+    }
+  }, [row._id, row.linkMode, row.qrType, onSavedQrFromApi, onStubNotice]);
 
   const handleRenameConfirm = useCallback(
     async (name) => {
@@ -245,6 +308,14 @@ export default function SavedQrCard({
         onError={onStubNotice}
       />
 
+      <DynamicQrManageModal
+        open={dynamicModalOpen}
+        onClose={() => setDynamicModalOpen(false)}
+        row={row}
+        onSaved={onSavedQrFromApi}
+        onError={onStubNotice}
+      />
+
       <SimpleTextModal
         open={renameOpen}
         onClose={() => !renameBusy && setRenameOpen(false)}
@@ -294,7 +365,9 @@ export default function SavedQrCard({
           </button>
         </div>
 
-        <div className="dashboard-qr-col-meta flex-grow-1 min-w-0 d-flex flex-column">
+        <div className="dashboard-qr-col-meta flex-grow-1 min-w-0" dir="rtl">
+          <div className="dashboard-qr-meta-with-actions d-flex gap-2 w-100 align-items-start min-w-0">
+            <div className="dashboard-qr-meta-text-col flex-grow-1 min-w-0 d-flex flex-column">
           <div className="d-flex align-items-center gap-2 text-muted small mb-1">
             <FiLink aria-hidden />
             <span>{typeLabel}</span>
@@ -313,23 +386,82 @@ export default function SavedQrCard({
               <FiEdit2 size={18} aria-hidden />
             </button>
           </div>
-          <div className="small text-muted mb-1 d-flex align-items-start gap-1">
-            <FiLink className="flex-shrink-0 mt-1" aria-hidden />
-            <span>
-              קישור דינמי:{" "}
-              <em className="text-secondary">יתווסף בהמשך (MongoDB)</em>
-            </span>
+          <div className="small mb-1 d-flex align-items-start gap-1 flex-wrap">
+            <FiLink className="flex-shrink-0 mt-1 text-muted" aria-hidden />
+            {row.linkMode === "dynamic" ? (
+              <>
+                <span className="badge text-bg-secondary align-self-center">
+                  דינמי
+                </span>
+                {row.redirectPaused ? (
+                  <span className="badge bg-warning text-dark align-self-center">
+                    הפניה מושהית
+                  </span>
+                ) : null}
+                <span className="text-muted">
+                  סריקות:{" "}
+                  <strong className="text-body">
+                    {typeof row.scanCount === "number" ? row.scanCount : 0}
+                  </strong>
+                </span>
+              </>
+            ) : (
+              <span className="text-muted">סטטי — הכתובת מוטמעת ב־QR</span>
+            )}
           </div>
-          <div className="small mb-1 d-flex align-items-start gap-1 text-break">
+          <div
+            className="small mb-1 w-100 d-flex align-items-start gap-1 justify-content-start text-break"
+            dir="rtl"
+          >
             <FiCornerUpLeft className="flex-shrink-0 mt-1" aria-hidden />
-            <span title={destinationSummary(row)}>
-              {destinationSummary(row)}
-            </span>
+            <div
+              className="d-flex flex-nowrap align-items-start gap-1 min-w-0 mw-100"
+              dir="ltr"
+            >
+              <button
+                type="button"
+                className="btn btn-link btn-sm p-0 m-0 text-secondary flex-shrink-0 dashboard-qr-destination-edit-btn"
+                title={
+                  row.linkMode === "dynamic"
+                    ? "עריכת יעד הפניה"
+                    : "עריכת היעד במחולל"
+                }
+                aria-label={
+                  row.linkMode === "dynamic"
+                    ? "עריכת יעד הפניה"
+                    : "עריכת היעד במחולל"
+                }
+                onClick={handleEditDestination}
+              >
+                <FiEdit2 size={16} aria-hidden />
+              </button>
+              <span
+                className="min-w-0 text-break"
+                title={destinationSummary(row)}
+              >
+                {destinationSummary(row)}
+              </span>
+            </div>
           </div>
           <div className="small text-muted mb-2 d-flex align-items-center gap-1">
             <FiClock aria-hidden />
             {formatSavedDate(row.createdAt)}
           </div>
+
+          {row.linkMode === "dynamic" && encodedInQr ? (
+            <div
+              className="w-100 d-flex justify-content-start mb-2"
+              dir="rtl"
+            >
+              <p
+                className="small text-muted mb-0 text-break font-monospace text-end d-inline-block max-w-100"
+                dir="ltr"
+                title={encodedInQr}
+              >
+                {encodedInQr}
+              </p>
+            </div>
+          ) : null}
 
           <div className="dashboard-qr-active-row d-flex align-items-center gap-2 flex-wrap mb-3">
             <span className="dashboard-qr-active-label">פעיל</span>
@@ -404,40 +536,56 @@ export default function SavedQrCard({
             ) : null}
           </div>
 
-          <div className="dashboard-qr-card-actions d-flex flex-wrap gap-2 justify-content-lg-end mt-auto pt-3">
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm dashboard-qr-action-labeled d-inline-flex align-items-center gap-1"
-              onClick={handleOpenDestination}
-            >
-              <FiExternalLink size={16} aria-hidden />
-              פתח
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm dashboard-qr-action-labeled d-inline-flex align-items-center gap-1"
-              onClick={() => setStyleEditOpen(true)}
-            >
-              <FiEdit2 size={16} aria-hidden />
-              שינוי
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline-secondary btn-sm dashboard-qr-action-labeled d-inline-flex align-items-center gap-1"
-              onClick={() => onDuplicateStub()}
-            >
-              <FiCopy size={16} aria-hidden />
-              שכפל
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline-danger btn-sm dashboard-qr-action-labeled d-inline-flex align-items-center gap-1"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              <FiTrash2 size={16} aria-hidden />
-              מחק
-            </button>
+          {row.linkMode !== "dynamic" && row.qrType === "url" ? (
+            <div className="pt-2 pb-1">
+              <button
+                type="button"
+                className="btn btn-outline-teal btn-sm dashboard-qr-action-labeled d-inline-flex align-items-center gap-1"
+                onClick={() => void handleEnableDynamic()}
+                disabled={linkModeBusy}
+              >
+                <FiLink size={16} aria-hidden />
+                הפוך לדינמי
+              </button>
+            </div>
+          ) : null}
+            </div>
+
+            <div className="dashboard-qr-card-actions-col">
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm dashboard-qr-action-labeled dashboard-qr-card-action-btn w-100"
+                onClick={handleOpenDestination}
+              >
+                <FiExternalLink size={16} aria-hidden />
+                פתח
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm dashboard-qr-action-labeled dashboard-qr-card-action-btn w-100"
+                onClick={() => setStyleEditOpen(true)}
+              >
+                <FiEdit2 size={16} aria-hidden />
+                שינוי
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-secondary btn-sm dashboard-qr-action-labeled dashboard-qr-card-action-btn w-100"
+                onClick={() => onDuplicateStub()}
+              >
+                <FiCopy size={16} aria-hidden />
+                שכפל
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline-danger btn-sm dashboard-qr-action-labeled dashboard-qr-card-action-btn w-100"
+                onClick={handleDelete}
+                disabled={deleting}
+              >
+                <FiTrash2 size={16} aria-hidden />
+                מחק
+              </button>
+            </div>
           </div>
         </div>
       </div>
