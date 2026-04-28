@@ -2,6 +2,11 @@ const express = require("express");
 const mongoose = require("mongoose");
 const SavedQr = require("../models/SavedQr");
 const { requireAuth } = require("../middleware/requireAuth");
+const {
+  normalizeTargetUrl,
+  resolveTargetFromSavedDoc,
+  randomSlug,
+} = require("../utils/dynamicQr");
 
 const router = express.Router();
 
@@ -22,11 +27,16 @@ function trimBodyForStorage(body) {
     typeof qrValue === "string" ? qrValue.trim() : "";
   const nameRaw = typeof displayName === "string" ? displayName.trim() : "";
   const displayNameTrimmed = nameRaw.slice(0, MAX_DISPLAY_NAME);
+  const linkMode =
+    body?.linkMode === "dynamic" && String(qrType).trim() === "url"
+      ? "dynamic"
+      : "static";
   return {
-    qrType,
+    qrType: String(qrType).trim(),
     qrValue: valueTrimmed,
     displayName: displayNameTrimmed,
     qrInputs: qrInputs && typeof qrInputs === "object" ? qrInputs : {},
+    linkMode,
     style: {
       fgColor: style?.fgColor ?? "#000000",
       bgColor: style?.bgColor ?? "#ffffff",
@@ -40,6 +50,27 @@ function trimBodyForStorage(body) {
       pdfInputMode: style?.pdfInputMode ?? "file",
       logoInputMode: style?.logoInputMode ?? "file",
     },
+  };
+}
+
+function savedRowJson(doc) {
+  const o = doc && typeof doc.toObject === "function" ? doc.toObject() : doc;
+  if (!o) return null;
+  return {
+    _id: o._id,
+    qrType: o.qrType,
+    qrValue: o.qrValue || "",
+    displayName: o.displayName || "",
+    qrInputs: o.qrInputs || {},
+    style: o.style,
+    isActive: o.isActive !== false,
+    linkMode: o.linkMode || "static",
+    publicSlug: o.publicSlug || null,
+    dynamicTargetUrl: o.dynamicTargetUrl || "",
+    redirectPaused: !!o.redirectPaused,
+    scanCount: typeof o.scanCount === "number" ? o.scanCount : 0,
+    createdAt: o.createdAt,
+    updatedAt: o.updatedAt,
   };
 }
 
@@ -91,6 +122,15 @@ function escapeRegex(str) {
   return String(str || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+async function allocateUniqueSlug() {
+  for (let i = 0; i < 10; i += 1) {
+    const slug = randomSlug();
+    const exists = await SavedQr.exists({ publicSlug: slug });
+    if (!exists) return slug;
+  }
+  throw new Error("Could not allocate unique slug");
+}
+
 router.get("/saved-qrs", requireAuth, async (req, res) => {
   try {
     const limit = Math.min(
@@ -129,22 +169,46 @@ router.post("/saved-qrs", requireAuth, async (req, res) => {
   }
   try {
     const userId = req.userId;
-    const doc = await SavedQr.create({
+    let payload = {
       userId,
       ...trimmed,
-    });
+    };
+
+    if (trimmed.linkMode === "dynamic") {
+      const synthetic = {
+        qrType: trimmed.qrType,
+        qrInputs: trimmed.qrInputs,
+        qrValue: trimmed.qrValue,
+        dynamicTargetUrl: "",
+      };
+      const target = resolveTargetFromSavedDoc(synthetic);
+      if (!target) {
+        return res.status(400).json({
+          error: "Valid https or http destination URL required for dynamic QR",
+        });
+      }
+      const publicSlug = await allocateUniqueSlug();
+      payload = {
+        ...payload,
+        linkMode: "dynamic",
+        publicSlug,
+        dynamicTargetUrl: target,
+        redirectPaused: false,
+        scanCount: 0,
+        qrValue: "",
+      };
+    } else {
+      payload.linkMode = "static";
+      payload.publicSlug = null;
+      payload.dynamicTargetUrl = "";
+      payload.redirectPaused = false;
+      payload.scanCount = 0;
+    }
+
+    const doc = await SavedQr.create(payload);
     res.status(201).json({
       updated: false,
-      saved: {
-        _id: doc._id,
-        qrType: doc.qrType,
-        qrValue: doc.qrValue,
-        displayName: doc.displayName || "",
-        qrInputs: doc.qrInputs,
-        style: doc.style,
-        isActive: doc.isActive !== false,
-        createdAt: doc.createdAt,
-      },
+      saved: savedRowJson(doc),
     });
   } catch (err) {
     console.error("Save QR error:", err);
@@ -197,6 +261,77 @@ router.patch("/saved-qrs/:id", requireAuth, async (req, res) => {
       updates.isActive = req.body.isActive;
     }
 
+    if (typeof req.body?.redirectPaused === "boolean") {
+      if (prev.linkMode !== "dynamic") {
+        return res
+          .status(400)
+          .json({ error: "redirectPaused applies only to dynamic QR codes" });
+      }
+      updates.redirectPaused = req.body.redirectPaused;
+    }
+
+    if (typeof req.body?.dynamicTargetUrl === "string") {
+      if (prev.linkMode !== "dynamic") {
+        return res
+          .status(400)
+          .json({ error: "dynamicTargetUrl applies only to dynamic QR codes" });
+      }
+      const normalized = normalizeTargetUrl(req.body.dynamicTargetUrl);
+      if (!normalized) {
+        return res.status(400).json({ error: "Invalid destination URL" });
+      }
+      updates.dynamicTargetUrl = normalized;
+    }
+
+    if (req.body?.linkMode === "static") {
+      updates.linkMode = "static";
+      updates.publicSlug = null;
+      const fallbackTarget =
+        normalizeTargetUrl(prev.dynamicTargetUrl) ||
+        resolveTargetFromSavedDoc(prev);
+      if (fallbackTarget) {
+        updates.qrValue = fallbackTarget;
+      }
+      updates.dynamicTargetUrl = "";
+      updates.redirectPaused = false;
+    } else if (req.body?.linkMode === "dynamic") {
+      if (prev.qrType !== "url") {
+        return res.status(400).json({
+          error: "Only URL-type saved QR can be switched to dynamic",
+        });
+      }
+      if (prev.linkMode !== "dynamic") {
+        const mergedInputs =
+          updates.qrInputs && typeof updates.qrInputs === "object"
+            ? updates.qrInputs
+            : prev.qrInputs || {};
+        const mergedQrValue =
+          typeof updates.qrValue === "string" ? updates.qrValue : prev.qrValue;
+        const synthetic = {
+          qrType: updates.qrType || prev.qrType,
+          qrInputs: mergedInputs,
+          qrValue: mergedQrValue,
+          dynamicTargetUrl:
+            typeof req.body?.dynamicTargetUrl === "string"
+              ? req.body.dynamicTargetUrl
+              : "",
+        };
+        const target =
+          normalizeTargetUrl(req.body?.dynamicTargetUrl) ||
+          resolveTargetFromSavedDoc(synthetic);
+        if (!target) {
+          return res.status(400).json({
+            error: "Valid destination URL required to enable dynamic mode",
+          });
+        }
+        updates.linkMode = "dynamic";
+        updates.publicSlug = await allocateUniqueSlug();
+        updates.dynamicTargetUrl = target;
+        updates.redirectPaused = false;
+        updates.qrValue = "";
+      }
+    }
+
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No fields to update" });
     }
@@ -207,17 +342,7 @@ router.patch("/saved-qrs/:id", requireAuth, async (req, res) => {
       { new: true, runValidators: true },
     ).lean();
     res.json({
-      saved: {
-        _id: doc._id,
-        qrType: doc.qrType,
-        qrValue: doc.qrValue,
-        displayName: doc.displayName || "",
-        qrInputs: doc.qrInputs,
-        style: doc.style,
-        isActive: doc.isActive !== false,
-        createdAt: doc.createdAt,
-        updatedAt: doc.updatedAt,
-      },
+      saved: savedRowJson(doc),
     });
   } catch (err) {
     console.error("Patch saved QR error:", err);

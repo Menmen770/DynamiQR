@@ -31,11 +31,24 @@ const savedQrSchema = new mongoose.Schema(
     style: { type: styleSchema, default: () => ({}) },
     displayName: { type: String, default: "", trim: true },
     isActive: { type: Boolean, default: true },
+    linkMode: {
+      type: String,
+      enum: ["static", "dynamic"],
+      default: "static",
+    },
+    publicSlug: { type: String, default: null },
+    dynamicTargetUrl: { type: String, default: "" },
+    redirectPaused: { type: Boolean, default: false },
+    scanCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 );
 
 savedQrSchema.index({ userId: 1, createdAt: -1 });
 savedQrSchema.index({ userId: 1, displayName: 1 });
+savedQrSchema.index(
+  { publicSlug: 1 },
+  { unique: true, sparse: true },
+);
 
 module.exports = mongoose.model("SavedQr", savedQrSchema);
