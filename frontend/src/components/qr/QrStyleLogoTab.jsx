@@ -1,8 +1,9 @@
-import { FiFileText, FiGrid, FiLink, FiX } from "react-icons/fi";
+import { FiFileText, FiX } from "react-icons/fi";
 import {
   PRESET_BRAND_LOGOS,
   isPresetLogoDataUrl,
 } from "../../utils/presetBrandLogos";
+import QrLogoInputModeToggle from "./QrLogoInputModeToggle";
 
 function QrStyleLogoTab({
   logoInputMode,
@@ -29,67 +30,29 @@ function QrStyleLogoTab({
     }
   };
 
-  const sourceTabClass = (mode) =>
-    `nav-link ${logoInputMode === mode ? "active" : ""}`;
   const shapeTabClass = (shape) =>
     `nav-link ${logoShape === shape ? "active" : ""}`;
 
+  const handleLogoSourceMode = (next) => {
+    if (
+      (next === "file" || next === "url") &&
+      logoInputMode === "preset" &&
+      isPresetLogoDataUrl(logoUrl)
+    ) {
+      setLogoUrl("");
+      setLogoFile(null);
+    }
+    setLogoInputMode(next);
+  };
+
   return (
     <div className="qr-logo-tab-stack">
-      <ul
-        className="nav nav-pills qr-tabs qr-logo-tab-row qr-logo-inline-tabs mb-0"
-        role="tablist"
-        aria-label="מקור לוגו"
-      >
-          <li className="nav-item" role="presentation">
-            <button
-              type="button"
-              className={sourceTabClass("preset")}
-              role="tab"
-              aria-selected={logoInputMode === "preset"}
-              onClick={() => setLogoInputMode("preset")}
-            >
-              <FiGrid className="qr-logo-tab-icon" aria-hidden />
-              לוגואים מוכנים
-            </button>
-          </li>
-          <li className="nav-item" role="presentation">
-            <button
-              type="button"
-              className={sourceTabClass("file")}
-              role="tab"
-              aria-selected={logoInputMode === "file"}
-              onClick={() => {
-                if (logoInputMode === "preset" && isPresetLogoDataUrl(logoUrl)) {
-                  setLogoUrl("");
-                  setLogoFile(null);
-                }
-                setLogoInputMode("file");
-              }}
-            >
-              <FiFileText className="qr-logo-tab-icon" aria-hidden />
-              העלאת תמונה
-            </button>
-          </li>
-          <li className="nav-item" role="presentation">
-            <button
-              type="button"
-              className={sourceTabClass("url")}
-              role="tab"
-              aria-selected={logoInputMode === "url"}
-              onClick={() => {
-                if (logoInputMode === "preset" && isPresetLogoDataUrl(logoUrl)) {
-                  setLogoUrl("");
-                  setLogoFile(null);
-                }
-                setLogoInputMode("url");
-              }}
-            >
-              <FiLink className="qr-logo-tab-icon" aria-hidden />
-              הדבקת URL
-            </button>
-          </li>
-        </ul>
+      <div className="qr-logo-source-segmented">
+        <QrLogoInputModeToggle
+          mode={logoInputMode}
+          onChange={handleLogoSourceMode}
+        />
+      </div>
 
       <ul
         className="nav nav-pills qr-tabs qr-logo-tab-row qr-logo-inline-tabs mb-0"

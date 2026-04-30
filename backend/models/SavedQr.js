@@ -17,6 +17,19 @@ const styleSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const scanEventSchema = new mongoose.Schema(
+  {
+    scannedAt: { type: Date, default: Date.now },
+    os: {
+      type: String,
+      enum: ["ios", "android", "other"],
+      default: "other",
+    },
+    countryCode: { type: String, default: "UN" },
+  },
+  { _id: false },
+);
+
 const savedQrSchema = new mongoose.Schema(
   {
     userId: {
@@ -36,10 +49,11 @@ const savedQrSchema = new mongoose.Schema(
       enum: ["static", "dynamic"],
       default: "static",
     },
-    publicSlug: { type: String, default: null },
+    publicSlug: { type: String, default: undefined },
     dynamicTargetUrl: { type: String, default: "" },
     redirectPaused: { type: Boolean, default: false },
     scanCount: { type: Number, default: 0 },
+    scanEvents: { type: [scanEventSchema], default: [] },
   },
   { timestamps: true },
 );

@@ -20,14 +20,16 @@ function QrStyleColorTab({
   return (
     <div className="vstack gap-4">
       <div className="qr-color-section">
-        <label className="form-label fw-bold mb-3">צבע נקודות ה-QR</label>
+        <label className="form-label fw-bold mb-3 text-end d-block w-100">
+          צבע ה-QR
+        </label>
 
         <div className="d-flex gap-2 flex-wrap qr-color-palette">
           {qrPresetColors.map((color) => (
             <button
               key={color.hex}
               type="button"
-              aria-label={`צבע נקודות QR: ${color.name}`}
+              aria-label={`צבע QR: ${color.name}`}
               onClick={() => setFgColor(color.hex)}
               style={{
                 width: "48px",
@@ -64,11 +66,13 @@ function QrStyleColorTab({
 
       <hr className="my-2" />
       <div className="qr-bg-section">
-        <div className="qr-bg-mode-row mb-3">
-          <label className="form-label fw-bold mb-0">רקע</label>
+        <div className="qr-bg-mode-row mb-3 w-100">
+          <label className="form-label fw-bold mb-0 w-100 text-end d-block">
+            רקע
+          </label>
 
           <ul
-            className="nav nav-pills qr-tabs qr-bg-mode-tabs"
+            className="nav nav-pills qr-tabs qr-bg-mode-tabs justify-content-center flex-wrap w-100 mb-0"
             role="tablist"
           >
             <li className="nav-item" role="presentation">

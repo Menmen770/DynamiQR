@@ -4,9 +4,11 @@ const SavedQr = require("../models/SavedQr");
 const { requireAuth } = require("../middleware/requireAuth");
 const {
   normalizeTargetUrl,
+  normalizeRedirectTarget,
   resolveTargetFromSavedDoc,
   randomSlug,
 } = require("../utils/dynamicQr");
+const { buildEncodedQrText } = require("../utils/buildEncodedQrText");
 
 const router = express.Router();
 
@@ -28,9 +30,7 @@ function trimBodyForStorage(body) {
   const nameRaw = typeof displayName === "string" ? displayName.trim() : "";
   const displayNameTrimmed = nameRaw.slice(0, MAX_DISPLAY_NAME);
   const linkMode =
-    body?.linkMode === "dynamic" && String(qrType).trim() === "url"
-      ? "dynamic"
-      : "static";
+    body?.linkMode === "dynamic" ? "dynamic" : "static";
   return {
     qrType: String(qrType).trim(),
     qrValue: valueTrimmed,
@@ -122,6 +122,38 @@ function escapeRegex(str) {
   return String(str || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const COUNTRY_LABELS = {
+  IL: "ישראל",
+  US: "ארה\"ב",
+  GB: "בריטניה",
+  DE: "גרמניה",
+  FR: "צרפת",
+  ES: "ספרד",
+  IT: "איטליה",
+  RU: "רוסיה",
+  IN: "הודו",
+  BR: "ברזיל",
+  CN: "סין",
+  JP: "יפן",
+  CA: "קנדה",
+  AU: "אוסטרליה",
+  UN: "לא ידוע",
+};
+
+function countryNameFromCode(codeRaw) {
+  const code = String(codeRaw || "UN").toUpperCase();
+  return COUNTRY_LABELS[code] || code;
+}
+
+function toDayKey(dateLike) {
+  const d = new Date(dateLike);
+  if (Number.isNaN(d.getTime())) return null;
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 async function allocateUniqueSlug() {
   for (let i = 0; i < 10; i += 1) {
     const slug = randomSlug();
@@ -182,9 +214,13 @@ router.post("/saved-qrs", requireAuth, async (req, res) => {
         dynamicTargetUrl: "",
       };
       const target = resolveTargetFromSavedDoc(synthetic);
-      if (!target) {
+      const built = String(
+        buildEncodedQrText(trimmed.qrType, trimmed.qrInputs) || "",
+      ).trim();
+      if (!target && !built) {
         return res.status(400).json({
-          error: "Valid https or http destination URL required for dynamic QR",
+          error:
+            "נדרש תוכן תקין לקוד דינמי (למשל כתובת https או פרטי הרשת)",
         });
       }
       const publicSlug = await allocateUniqueSlug();
@@ -192,14 +228,14 @@ router.post("/saved-qrs", requireAuth, async (req, res) => {
         ...payload,
         linkMode: "dynamic",
         publicSlug,
-        dynamicTargetUrl: target,
+        dynamicTargetUrl: target || "",
         redirectPaused: false,
         scanCount: 0,
         qrValue: "",
       };
     } else {
       payload.linkMode = "static";
-      payload.publicSlug = null;
+      payload.publicSlug = undefined;
       payload.dynamicTargetUrl = "";
       payload.redirectPaused = false;
       payload.scanCount = 0;
@@ -276,30 +312,38 @@ router.patch("/saved-qrs/:id", requireAuth, async (req, res) => {
           .status(400)
           .json({ error: "dynamicTargetUrl applies only to dynamic QR codes" });
       }
-      const normalized = normalizeTargetUrl(req.body.dynamicTargetUrl);
-      if (!normalized) {
-        return res.status(400).json({ error: "Invalid destination URL" });
+      const raw = req.body.dynamicTargetUrl.trim();
+      if (!raw) {
+        updates.dynamicTargetUrl = "";
+      } else {
+        const http = normalizeTargetUrl(raw);
+        const redir = http || normalizeRedirectTarget(raw);
+        if (!redir) {
+          return res.status(400).json({ error: "Invalid destination URL" });
+        }
+        updates.dynamicTargetUrl = redir;
       }
-      updates.dynamicTargetUrl = normalized;
     }
+
+    const unsetFields = {};
 
     if (req.body?.linkMode === "static") {
       updates.linkMode = "static";
-      updates.publicSlug = null;
+      unsetFields.publicSlug = "";
       const fallbackTarget =
         normalizeTargetUrl(prev.dynamicTargetUrl) ||
         resolveTargetFromSavedDoc(prev);
+      const built = String(
+        buildEncodedQrText(prev.qrType, prev.qrInputs || {}) || "",
+      ).trim();
       if (fallbackTarget) {
         updates.qrValue = fallbackTarget;
+      } else if (built) {
+        updates.qrValue = built;
       }
       updates.dynamicTargetUrl = "";
       updates.redirectPaused = false;
     } else if (req.body?.linkMode === "dynamic") {
-      if (prev.qrType !== "url") {
-        return res.status(400).json({
-          error: "Only URL-type saved QR can be switched to dynamic",
-        });
-      }
       if (prev.linkMode !== "dynamic") {
         const mergedInputs =
           updates.qrInputs && typeof updates.qrInputs === "object"
@@ -311,22 +355,21 @@ router.patch("/saved-qrs/:id", requireAuth, async (req, res) => {
           qrType: updates.qrType || prev.qrType,
           qrInputs: mergedInputs,
           qrValue: mergedQrValue,
-          dynamicTargetUrl:
-            typeof req.body?.dynamicTargetUrl === "string"
-              ? req.body.dynamicTargetUrl
-              : "",
+          dynamicTargetUrl: "",
         };
-        const target =
-          normalizeTargetUrl(req.body?.dynamicTargetUrl) ||
-          resolveTargetFromSavedDoc(synthetic);
-        if (!target) {
+        const target = resolveTargetFromSavedDoc(synthetic);
+        const built = String(
+          buildEncodedQrText(synthetic.qrType, mergedInputs) || "",
+        ).trim();
+        if (!target && !built) {
           return res.status(400).json({
-            error: "Valid destination URL required to enable dynamic mode",
+            error:
+              "נדרש תוכן תקין כדי להפעיל מצב דינמי (למשל כתובת https או פרטי הרשת)",
           });
         }
         updates.linkMode = "dynamic";
         updates.publicSlug = await allocateUniqueSlug();
-        updates.dynamicTargetUrl = target;
+        updates.dynamicTargetUrl = target || "";
         updates.redirectPaused = false;
         updates.qrValue = "";
       }
@@ -336,9 +379,14 @@ router.patch("/saved-qrs/:id", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "No fields to update" });
     }
 
+    const updateDoc = { $set: updates };
+    if (Object.keys(unsetFields).length > 0) {
+      updateDoc.$unset = unsetFields;
+    }
+
     const doc = await SavedQr.findOneAndUpdate(
       { _id: id, userId: req.userId },
-      { $set: updates },
+      updateDoc,
       { new: true, runValidators: true },
     ).lean();
     res.json({
@@ -347,6 +395,83 @@ router.patch("/saved-qrs/:id", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Patch saved QR error:", err);
     res.status(500).json({ error: "Failed to update" });
+  }
+});
+
+router.get("/saved-qrs/:id/stats", requireAuth, async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.isValidObjectId(id)) {
+    return res.status(400).json({ error: "Invalid id" });
+  }
+  try {
+    const doc = await SavedQr.findOne({ _id: id, userId: req.userId }).lean();
+    if (!doc) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    const events = Array.isArray(doc.scanEvents) ? doc.scanEvents : [];
+    const osCounts = { ios: 0, android: 0, other: 0 };
+    const countryCounts = new Map();
+    const daily = new Map();
+
+    const now = new Date();
+    const last30Keys = [];
+    for (let i = 29; i >= 0; i -= 1) {
+      const d = new Date(now);
+      d.setUTCDate(now.getUTCDate() - i);
+      const key = toDayKey(d);
+      if (key) {
+        last30Keys.push(key);
+        daily.set(key, 0);
+      }
+    }
+
+    for (const ev of events) {
+      const os = ev?.os === "ios" || ev?.os === "android" ? ev.os : "other";
+      osCounts[os] += 1;
+
+      const cc = String(ev?.countryCode || "UN").toUpperCase();
+      countryCounts.set(cc, (countryCounts.get(cc) || 0) + 1);
+
+      const dayKey = toDayKey(ev?.scannedAt);
+      if (dayKey && daily.has(dayKey)) {
+        daily.set(dayKey, (daily.get(dayKey) || 0) + 1);
+      }
+    }
+
+    const totalScans =
+      typeof doc.scanCount === "number"
+        ? doc.scanCount
+        : osCounts.ios + osCounts.android + osCounts.other;
+
+    const osBreakdown = [
+      { key: "ios", label: "iPhone (iOS)", count: osCounts.ios },
+      { key: "android", label: "Android", count: osCounts.android },
+      { key: "other", label: "אחר", count: osCounts.other },
+    ];
+
+    const countryBreakdown = Array.from(countryCounts.entries())
+      .map(([code, count]) => ({
+        code,
+        label: countryNameFromCode(code),
+        count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8);
+
+    const dailySeries = last30Keys.map((date) => ({
+      date,
+      count: daily.get(date) || 0,
+    }));
+
+    return res.json({
+      totalScans,
+      osBreakdown,
+      countryBreakdown,
+      dailySeries,
+    });
+  } catch (err) {
+    console.error("Saved QR stats error:", err);
+    return res.status(500).json({ error: "Failed to load stats" });
   }
 });
 

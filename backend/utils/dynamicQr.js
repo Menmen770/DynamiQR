@@ -15,13 +15,40 @@ function normalizeTargetUrl(raw) {
   }
 }
 
+/** יעד חוקי ל־HTTP Location (דפדפנים רבים תומכים גם ב־mailto / tel / sms). */
+function normalizeRedirectTarget(raw) {
+  const s = String(raw || "").trim();
+  if (!s || s.length > MAX_TARGET_URL) return null;
+  try {
+    const u = new URL(s);
+    const p = u.protocol.toLowerCase();
+    if (
+      p === "http:" ||
+      p === "https:" ||
+      p === "mailto:" ||
+      p === "tel:" ||
+      p === "sms:"
+    ) {
+      return u.toString();
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 function resolveTargetFromSavedDoc(doc) {
-  const explicit = normalizeTargetUrl(doc?.dynamicTargetUrl);
-  if (explicit) return explicit;
+  const ex = String(doc?.dynamicTargetUrl || "").trim();
+  if (ex) {
+    const http = normalizeTargetUrl(ex);
+    if (http) return http;
+    const fromExplicit = normalizeRedirectTarget(ex);
+    if (fromExplicit) return fromExplicit;
+  }
   const type = doc?.qrType || "url";
   const inputs = doc?.qrInputs && typeof doc.qrInputs === "object" ? doc.qrInputs : {};
   const built = String(buildEncodedQrText(type, inputs) || "").trim();
-  return normalizeTargetUrl(built);
+  return normalizeRedirectTarget(built);
 }
 
 function randomSlug() {
@@ -38,6 +65,7 @@ function normalizeSlugParam(s) {
 
 module.exports = {
   normalizeTargetUrl,
+  normalizeRedirectTarget,
   resolveTargetFromSavedDoc,
   randomSlug,
   isValidSlug,

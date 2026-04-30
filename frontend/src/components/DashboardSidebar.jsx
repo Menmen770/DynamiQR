@@ -147,10 +147,6 @@ export default function DashboardSidebar({
           <FiEdit3 aria-hidden />
           עדכון פרטים
         </button>
-
-        <p className="small text-muted mt-3 mb-0">
-          סדר ותיקיות נשמרים בחשבון; גיבוי מקומי בדפדפן כשהשרת לא זמין.
-        </p>
       </div>
     </aside>
   );

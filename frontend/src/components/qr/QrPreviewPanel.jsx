@@ -23,9 +23,6 @@ function QrPreviewPanel({
   saveQr,
   saveQrSaving,
   saveQrMessage,
-  linkMode,
-  handleLinkModeChange,
-  publicSlug,
 }) {
   const showPdfFileHint =
     qrType === "pdf" && pdfInputMode === "file" && pdfFile && !qrInputs.pdf;
@@ -98,45 +95,6 @@ function QrPreviewPanel({
             <span className="qr-step">3</span>
             <h5 className="mb-0">קוד ה-QR שלך</h5>
           </div>
-
-          {qrType === "url" && (
-            <div className="mb-3 p-3 rounded-3 bg-light border border-light">
-              <div className="small fw-semibold text-secondary mb-2">
-                סוג קישור
-              </div>
-              <div className="d-flex flex-wrap gap-3 align-items-start">
-                <label className="d-flex gap-2 align-items-center mb-0 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="qr-link-mode"
-                    checked={linkMode !== "dynamic"}
-                    onChange={() => handleLinkModeChange("static")}
-                  />
-                  <span>סטטי — הכתובת מקודדת ישירות ב־QR</span>
-                </label>
-                <label className="d-flex gap-2 align-items-center mb-0 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="qr-link-mode"
-                    checked={linkMode === "dynamic"}
-                    onChange={() => handleLinkModeChange("dynamic")}
-                  />
-                  <span>דינמי — קישור קצר; ניתן לשנות יעד אחרי ההדפסה</span>
-                </label>
-              </div>
-              {linkMode === "dynamic" && !publicSlug ? (
-                <p className="small text-muted mb-0 mt-2">
-                  לפני השמירה ה־QR משתנה מעט (סימון זמני בכתובת) כדי שתראה שזה מצב דינמי.
-                  אחרי &quot;שמירה לאוסף&quot; יופיע הקישור הקצר האמיתי.
-                </p>
-              ) : null}
-              {linkMode === "dynamic" && publicSlug ? (
-                <p className="small text-success mb-0 mt-2">
-                  הקישור ב־QR מעודכן לקישור הקצר שלך.
-                </p>
-              ) : null}
-            </div>
-          )}
 
           <div
             className={`qr-preview mb-4 flex-grow-1 ${

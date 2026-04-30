@@ -1,4 +1,6 @@
-import { FiFileText, FiLink, FiX } from "react-icons/fi";
+import { FiFileText, FiX } from "react-icons/fi";
+import QrLinkModeToggle from "./QrLinkModeToggle";
+import QrPdfInputModeToggle from "./QrPdfInputModeToggle";
 
 /**
  * שלב 1: כל שדות הקלט לפי סוג ה-QR.
@@ -16,6 +18,8 @@ function QrContentStep({
   handlePdfDragOver,
   handlePdfDragLeave,
   handlePdfFileSelect,
+  linkMode,
+  onLinkModeChange,
 }) {
   return (
     <>
@@ -28,28 +32,26 @@ function QrContentStep({
             placeholder="https://example.com"
             className="form-control form-control-lg"
           />
+          <div className="qr-segmented-row mt-3">
+            <QrLinkModeToggle
+              linkMode={linkMode}
+              onChange={onLinkModeChange}
+            />
+          </div>
         </div>
       )}
 
       {qrType === "pdf" && (
         <div>
-          <div className="d-flex gap-2 mb-3">
-            <button
-              type="button"
-              className={`btn pdf-input-mode-btn ${pdfInputMode === "file" ? "btn-primary" : "btn-outline-secondary"}`}
-              onClick={() => setPdfInputMode("file")}
-            >
-              <FiFileText className="me-2" />
-              העלאת קובץ
-            </button>
-            <button
-              type="button"
-              className={`btn pdf-input-mode-btn ${pdfInputMode === "url" ? "btn-primary" : "btn-outline-secondary"}`}
-              onClick={() => setPdfInputMode("url")}
-            >
-              <FiLink className="me-2" />
-              הדבקת URL
-            </button>
+          <div className="qr-segmented-row mb-3">
+            <QrPdfInputModeToggle
+              pdfInputMode={pdfInputMode}
+              onChange={setPdfInputMode}
+            />
+            <QrLinkModeToggle
+              linkMode={linkMode}
+              onChange={onLinkModeChange}
+            />
           </div>
 
           {pdfInputMode === "file" ? (
@@ -403,6 +405,15 @@ function QrContentStep({
           <div className="form-text">קישור לפרופיל הטיקטוק שלך</div>
         </div>
       )}
+
+      {qrType !== "url" && qrType !== "pdf" ? (
+        <div className="qr-segmented-row mt-3">
+          <QrLinkModeToggle
+            linkMode={linkMode}
+            onChange={onLinkModeChange}
+          />
+        </div>
+      ) : null}
     </>
   );
 }

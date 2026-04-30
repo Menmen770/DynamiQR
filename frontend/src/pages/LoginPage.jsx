@@ -1,23 +1,18 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import RobotSpline from "../components/RobotSpline";
 import GoogleSignInLink from "../components/GoogleSignInLink";
 import logo from "../assets/logo-full.png";
 import { API_BASE } from "../config";
 
 const isEmailValid = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const isPasswordValid = (password) => {
-  if (password.length < 7) return false;
-  if (!/^[\p{L}\p{N}]+$/u.test(password)) return false;
-  if (!/\p{L}/u.test(password)) return false;
-  if (!/\p{N}/u.test(password)) return false;
-  return true;
-};
+const isPasswordValid = (password) => String(password || "").length >= 5;
 
 function LoginPage() {
   const [searchParams] = useSearchParams();
   const [form, setForm] = useState({ email: "", password: "" });
-  const [touched, setTouched] = useState({});
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -33,17 +28,24 @@ function LoginPage() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setError("");
-  };
-
-  const handleBlur = (field) => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
+    setSubmitted(false);
   };
 
   const isFormValid = () =>
     isEmailValid(form.email) && isPasswordValid(form.password);
 
+  const getValidationMessage = () => {
+    if (!submitted) return "";
+    if (!isEmailValid(form.email)) return "אימייל לא תקין";
+    if (!isPasswordValid(form.password)) return "הסיסמה חייבת לכלל 5 תווים";
+    return "";
+  };
+
+  const submitAlert = error || getValidationMessage();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitted(true);
 
     // Debug: Check for admin code
     if (form.password === "123!") {
@@ -52,7 +54,6 @@ function LoginPage() {
     }
 
     if (!isFormValid()) {
-      setError("נא להזין אימייל וסיסמה תקינים");
       return;
     }
 
@@ -93,63 +94,53 @@ function LoginPage() {
                     <p className="text-muted">התחבר כדי להמשיך</p>
                   </div>
 
-                  {error && <div className="alert alert-danger">{error}</div>}
-
-                  <form onSubmit={handleSubmit} className="vstack gap-3">
+                  <form
+                    onSubmit={handleSubmit}
+                    className="vstack gap-3 auth-form"
+                    noValidate
+                  >
                     <div>
-                      <label className="form-label">אימייל</label>
                       <input
                         type="email"
                         name="email"
                         value={form.email}
                         onChange={handleChange}
-                        onBlur={() => handleBlur("email")}
-                        className={`form-control ${
-                          touched.email && !isEmailValid(form.email)
+                        className={`form-control auth-form-input ${
+                          submitted && !isEmailValid(form.email) ? "is-invalid" : ""
+                        }`}
+                        placeholder="כתובת אימייל"
+                      />
+                    </div>
+
+                    <div className="auth-password-field">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={form.password}
+                        onChange={handleChange}
+                        className={`form-control auth-form-input auth-form-input--with-icon ${
+                          submitted && !isPasswordValid(form.password)
                             ? "is-invalid"
                             : ""
                         }`}
-                        placeholder="you@example.com"
+                        placeholder="צור סיסמא"
                       />
-                      {touched.email && !isEmailValid(form.email) && (
-                        <div className="invalid-feedback">
-                          נא להזין אימייל תקין
-                        </div>
-                      )}
+                      <button
+                        className="auth-password-icon-btn"
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+                        aria-pressed={showPassword}
+                      >
+                        {showPassword ? <FiEyeOff /> : <FiEye />}
+                      </button>
                     </div>
 
-                    <div>
-                      <label className="form-label">סיסמה</label>
-                      <div className="input-group">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
-                          value={form.password}
-                          onChange={handleChange}
-                          onBlur={() => handleBlur("password")}
-                          className={`form-control ${
-                            touched.password && !isPasswordValid(form.password)
-                              ? "is-invalid"
-                              : ""
-                          }`}
-                          placeholder="הסיסמה שלך"
-                        />
-                        <button
-                          className="btn btn-outline-secondary"
-                          type="button"
-                          onClick={() => setShowPassword((prev) => !prev)}
-                        >
-                          {showPassword ? "הסתר" : "הצג"}
-                        </button>
-                        {touched.password &&
-                          !isPasswordValid(form.password) && (
-                            <div className="invalid-feedback d-block">
-                              הסיסמה חייבת לכלול לפחות 7 תווים, אותיות
-                              (עברית/אנגלית) ומספרים בלבד.
-                            </div>
-                          )}
+                    {submitAlert ? (
+                      <div className="auth-submit-alert" role="alert">
+                        {submitAlert}
                       </div>
-                    </div>
+                    ) : null}
 
                     <button
                       type="submit"

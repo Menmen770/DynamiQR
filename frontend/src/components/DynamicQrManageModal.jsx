@@ -77,20 +77,21 @@ export default function DynamicQrManageModal({
           </div>
           <div className="modal-body pt-0">
             <p className="text-muted small mb-3">
-              כתובת היעד אחרי הסריקה. הקישור הקצר ב־QR נשאר קבוע — בכרטיס מוצג מתחת לתאריך.
+              יעד אחרי הסריקה (כתובת אתר, mailto, טלפון או SMS). הקישור הקצר
+              ב־QR נשאר קבוע — מתחת לתאריך בכרטיס מוצג היעד הנוכחי.
             </p>
             <div className="mb-3">
               <label className="form-label" htmlFor="dynamic-target-url">
-                יעד הפניה (https)
+                יעד הפניה
               </label>
               <input
                 id="dynamic-target-url"
-                type="url"
+                type="text"
                 className="form-control"
                 dir="ltr"
                 value={targetUrl}
                 onChange={(e) => setTargetUrl(e.target.value)}
-                placeholder="https://…"
+                placeholder="https://… או mailto:… / tel:…"
               />
             </div>
             <div className="form-check mb-0">

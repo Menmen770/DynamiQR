@@ -78,7 +78,6 @@ function QrPage() {
     applySavedQrPayload,
     linkMode,
     handleLinkModeChange,
-    publicSlug,
   } = qr;
 
   useEffect(() => {
@@ -135,6 +134,8 @@ function QrPage() {
                   handlePdfDragOver={handlePdfDragOver}
                   handlePdfDragLeave={handlePdfDragLeave}
                   handlePdfFileSelect={handlePdfFileSelect}
+                  linkMode={linkMode}
+                  onLinkModeChange={handleLinkModeChange}
                 />
               </div>
             </div>
@@ -196,9 +197,6 @@ function QrPage() {
             saveQr={saveQr}
             saveQrSaving={saveQrSaving}
             saveQrMessage={saveQrMessage}
-            linkMode={linkMode}
-            handleLinkModeChange={handleLinkModeChange}
-            publicSlug={publicSlug}
           />
           </div>
         </div>
@@ -211,14 +209,14 @@ function QrPage() {
             footer={
               <button
                 type="button"
-                className="qr-home-create-cta"
+                className="dashboard-create-layered"
                 onClick={() =>
                   document
                     .getElementById("qr-generator")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" })
                 }
               >
-                צור QR עכשיו
+                יצירת QR חדש
               </button>
             }
           />

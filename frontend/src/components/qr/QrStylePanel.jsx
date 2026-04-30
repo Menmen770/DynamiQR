@@ -56,7 +56,7 @@ function QrStylePanel({
 
         <div className="qr-style-panel-layout d-flex flex-column gap-3 align-items-stretch min-w-0">
           <ul
-            className="nav nav-pills qr-tabs qr-style-tabs-rail flex-row flex-wrap justify-content-end w-100 mb-0"
+            className="nav nav-pills qr-tabs qr-style-tabs-rail flex-row flex-wrap justify-content-center w-100 mb-0"
             role="tablist"
             aria-label="לשוניות עיצוב"
           >

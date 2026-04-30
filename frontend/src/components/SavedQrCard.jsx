@@ -9,10 +9,11 @@ import {
   FiFolder,
   FiLink,
   FiTrash2,
+  FiX,
 } from "react-icons/fi";
 import { API_BASE } from "../config";
 import { QR_TYPES_MAIN, QR_TYPES_MORE } from "../utils/qrConstants";
-import { effectiveSavedQrEncodedText } from "../utils/qrEncodedText";
+import { effectiveSavedQrEncodedText, buildEncodedQrText } from "../utils/qrEncodedText";
 import {
   downloadDataUrlPng,
   getSavedQrPreviewDataUrl,
@@ -37,19 +38,28 @@ function formatSavedDate(iso) {
   }
 }
 
+function ellipsis96(s) {
+  const t = String(s || "").trim();
+  if (!t) return "";
+  return t.length > 96 ? `${t.slice(0, 96)}…` : t;
+}
+
 function destinationSummary(row) {
   if (row?.linkMode === "dynamic") {
     const d = String(row?.dynamicTargetUrl || "").trim();
-    if (d) return d.length > 96 ? `${d.slice(0, 96)}…` : d;
+    if (d) return ellipsis96(d);
+    const built = String(
+      buildEncodedQrText(row?.qrType, row?.qrInputs) || "",
+    ).trim();
+    if (built) return ellipsis96(built);
   }
   const v = String(row?.qrValue || "").trim();
-  if (v) return v.length > 96 ? `${v.slice(0, 96)}…` : v;
+  if (v) return ellipsis96(v);
   const inputs = row?.qrInputs;
   if (inputs && typeof inputs === "object") {
     const url = inputs.url || inputs.link;
     if (typeof url === "string" && url.trim()) {
-      const u = url.trim();
-      return u.length > 96 ? `${u.slice(0, 96)}…` : u;
+      return ellipsis96(url.trim());
     }
   }
   return "—";
@@ -61,6 +71,38 @@ function cardTitle(row) {
   const d = destinationSummary(row);
   if (d && d !== "—") return d.length > 48 ? `${d.slice(0, 48)}…` : d;
   return QR_TYPE_LABELS.get(row.qrType) || row.qrType || "קוד QR";
+}
+
+function percentOf(part, total) {
+  if (!total) return 0;
+  return Math.round((part / total) * 100);
+}
+
+function countryCodeToFlag(codeRaw) {
+  const code = String(codeRaw || "").toUpperCase();
+  if (!/^[A-Z]{2}$/.test(code) || code === "UN") return "🌍";
+  return String.fromCodePoint(
+    code.charCodeAt(0) + 127397,
+    code.charCodeAt(1) + 127397,
+  );
+}
+
+function pieStyleFromBreakdown(items) {
+  const total = items.reduce((s, it) => s + (it.count || 0), 0);
+  if (!total) {
+    return { background: "conic-gradient(#e2e8f0 0 100%)" };
+  }
+  let cursor = 0;
+  const segments = items
+    .filter((it) => it.count > 0)
+    .map((it) => {
+      const span = (it.count / total) * 360;
+      const start = cursor;
+      const end = cursor + span;
+      cursor = end;
+      return `${it.color} ${start}deg ${end}deg`;
+    });
+  return { background: `conic-gradient(${segments.join(", ")})` };
 }
 
 export default function SavedQrCard({
@@ -86,7 +128,11 @@ export default function SavedQrCard({
   const [styleEditOpen, setStyleEditOpen] = useState(false);
   const [activeBusy, setActiveBusy] = useState(false);
   const [dynamicModalOpen, setDynamicModalOpen] = useState(false);
-  const [linkModeBusy, setLinkModeBusy] = useState(false);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsError, setStatsError] = useState("");
+  const [statsData, setStatsData] = useState(null);
+  const [qrZoomOpen, setQrZoomOpen] = useState(false);
 
   const encodedInQr = useMemo(
     () => String(effectiveSavedQrEncodedText(row, API_BASE) || "").trim(),
@@ -104,7 +150,51 @@ export default function SavedQrCard({
 
   useEffect(() => {
     setMoveOpen(false);
+    setStatsModalOpen(false);
+    setStatsData(null);
+    setStatsError("");
+    setStatsLoading(false);
+    setQrZoomOpen(false);
   }, [row._id]);
+
+  useEffect(() => {
+    if (!qrZoomOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") setQrZoomOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [qrZoomOpen]);
+
+  useEffect(() => {
+    if (!statsModalOpen || row.linkMode !== "dynamic") return;
+    let cancelled = false;
+    const loadStats = async () => {
+      setStatsLoading(true);
+      setStatsError("");
+      try {
+        const res = await fetch(`${API_BASE}/api/saved-qrs/${row._id}/stats`, {
+          credentials: "include",
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(data?.error || "טעינת סטטיסטיקות נכשלה");
+        }
+        if (!cancelled) setStatsData(data || null);
+      } catch (err) {
+        if (!cancelled) {
+          setStatsError(err.message || "טעינת סטטיסטיקות נכשלה");
+          setStatsData(null);
+        }
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    };
+    void loadStats();
+    return () => {
+      cancelled = true;
+    };
+  }, [statsModalOpen, row._id, row.linkMode]);
 
   useEffect(() => {
     if (dynamicModalOpen && typeof onListRefresh === "function") {
@@ -174,52 +264,27 @@ export default function SavedQrCard({
         window.open(dest, "_blank", "noopener,noreferrer");
         return;
       }
+      if (/^(mailto:|tel:|sms:)/i.test(dest)) {
+        window.location.href = dest;
+        return;
+      }
     }
     const t = effectiveSavedQrEncodedText(row, API_BASE);
     if (/^https?:\/\//i.test(t)) {
       window.open(t, "_blank", "noopener,noreferrer");
       return;
     }
+    if (/^(mailto:|tel:|sms:)/i.test(t)) {
+      window.location.href = t;
+      return;
+    }
     onOpenEditor(row);
   }, [row, onOpenEditor]);
 
   const handleEditDestination = useCallback(() => {
-    if (row?.linkMode === "dynamic") {
-      setDynamicModalOpen(true);
-      return;
-    }
-    onOpenEditor(row);
-  }, [row, onOpenEditor]);
-
-  const handleEnableDynamic = useCallback(async () => {
-    if (row.linkMode === "dynamic" || row.qrType !== "url") return;
-    if (
-      !window.confirm(
-        "להפוך לקישור דינמי? יווצר קישור קצר חדש — הדפסות QR ישנות עם הכתובת הישירה לא יעודכנו אוטומטית.",
-      )
-    ) {
-      return;
-    }
-    setLinkModeBusy(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/saved-qrs/${row._id}`, {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ linkMode: "dynamic" }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data?.error || "הפעלה נכשלה");
-      }
-      if (data?.saved) onSavedQrFromApi(data.saved);
-      window.dispatchEvent(new Event("qr-saved-updated"));
-    } catch (e) {
-      onStubNotice(e.message || "הפעלה נכשלה");
-    } finally {
-      setLinkModeBusy(false);
-    }
-  }, [row._id, row.linkMode, row.qrType, onSavedQrFromApi, onStubNotice]);
+    if (row?.linkMode !== "dynamic") return;
+    setDynamicModalOpen(true);
+  }, [row?.linkMode]);
 
   const handleRenameConfirm = useCallback(
     async (name) => {
@@ -269,6 +334,43 @@ export default function SavedQrCard({
 
   const renameDefault = String(row?.displayName || "").trim();
   const isActive = row.isActive !== false;
+  const totalScans = Number(statsData?.totalScans || 0);
+  const osItems = [
+    {
+      key: "ios",
+      label: "iPhone (iOS)",
+      count: Number(
+        statsData?.osBreakdown?.find((x) => x.key === "ios")?.count || 0,
+      ),
+      color: "#06b6d4",
+    },
+    {
+      key: "android",
+      label: "Android",
+      count: Number(
+        statsData?.osBreakdown?.find((x) => x.key === "android")?.count || 0,
+      ),
+      color: "#22c55e",
+    },
+    {
+      key: "other",
+      label: "אחר",
+      count: Number(
+        statsData?.osBreakdown?.find((x) => x.key === "other")?.count || 0,
+      ),
+      color: "#94a3b8",
+    },
+  ];
+  const countryItems = (statsData?.countryBreakdown || []).map((x, idx) => ({
+    ...x,
+    color: ["#0ea5e9", "#22c55e", "#eab308", "#f97316", "#a855f7", "#ef4444"][
+      idx % 6
+    ],
+  }));
+  const dailySeries = Array.isArray(statsData?.dailySeries)
+    ? statsData.dailySeries
+    : [];
+  const maxDaily = Math.max(1, ...dailySeries.map((d) => Number(d.count || 0)));
 
   const handleActiveChange = useCallback(
     async (e) => {
@@ -315,6 +417,132 @@ export default function SavedQrCard({
         onSaved={onSavedQrFromApi}
         onError={onStubNotice}
       />
+      {row.linkMode === "dynamic" && statsModalOpen ? (
+        <div
+          className="modal fade show d-block saved-qr-style-modal-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`saved-qr-stats-modal-title-${row._id}`}
+          dir="rtl"
+          onClick={() => setStatsModalOpen(false)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content border-0 shadow">
+              <div className="modal-header border-0">
+                <h2
+                  className="modal-title h5 fw-bold"
+                  id={`saved-qr-stats-modal-title-${row._id}`}
+                >
+                  סטטיסטיקות לקוד
+                </h2>
+                <button
+                  type="button"
+                  className="btn-close"
+                  aria-label="סגירה"
+                  onClick={() => setStatsModalOpen(false)}
+                />
+              </div>
+              <div className="modal-body pt-0">
+                {statsLoading ? (
+                  <div className="text-center py-4">
+                    <span className="spinner-border spinner-border-sm text-secondary" role="status" />
+                  </div>
+                ) : statsError ? (
+                  <p className="small text-danger mb-0">{statsError}</p>
+                ) : (
+                  <>
+                    <div className="dashboard-qr-stats-counter mb-3">
+                      <span>פתחו את הקוד</span>
+                      <strong>{totalScans}</strong>
+                      <span>פעמים</span>
+                    </div>
+
+                    <div className="dashboard-qr-stats-grid">
+                      <div className="dashboard-qr-stat-item dashboard-qr-stat-item--pie">
+                        <span className="dashboard-qr-stat-label mb-2">iOS / Android</span>
+                        <div className="dashboard-qr-pie-wrap">
+                          <div
+                            className="dashboard-qr-pie"
+                            style={pieStyleFromBreakdown(osItems)}
+                          />
+                          <div className="dashboard-qr-pie-legend">
+                            {osItems.map((it) => (
+                              <div key={it.key} className="dashboard-qr-legend-row">
+                                <span
+                                  className="dashboard-qr-legend-dot"
+                                  style={{ background: it.color }}
+                                />
+                                <span>{it.label}</span>
+                                <strong>{percentOf(it.count, totalScans)}%</strong>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="dashboard-qr-stat-item dashboard-qr-stat-item--pie">
+                        <span className="dashboard-qr-stat-label mb-2">מדינות מובילות</span>
+                        <div className="dashboard-qr-pie-wrap">
+                          <div
+                            className="dashboard-qr-pie"
+                            style={pieStyleFromBreakdown(countryItems)}
+                          />
+                          <div className="dashboard-qr-pie-legend">
+                            {countryItems.length ? (
+                              countryItems.map((it) => (
+                                <div key={it.code} className="dashboard-qr-legend-row">
+                                  <span
+                                    className="dashboard-qr-legend-dot"
+                                    style={{ background: it.color }}
+                                  />
+                                  <span>{countryCodeToFlag(it.code)} {it.label}</span>
+                                  <strong>{percentOf(it.count, totalScans)}%</strong>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="small text-muted">עדיין אין נתוני מדינה</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="dashboard-qr-stat-item mt-3">
+                      <span className="dashboard-qr-stat-label mb-2">צפיות יומיות (30 יום)</span>
+                      <div className="dashboard-qr-bars">
+                        {dailySeries.map((d) => (
+                          <div key={d.date} className="dashboard-qr-bar-col">
+                            <div
+                              className="dashboard-qr-bar"
+                              style={{ height: `${Math.max(6, (Number(d.count || 0) / maxDaily) * 64)}px` }}
+                              title={`${d.date}: ${d.count}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="small text-muted mt-2">
+                        30 הימים האחרונים
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="modal-footer border-0">
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setStatsModalOpen(false)}
+                >
+                  סגירה
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <SimpleTextModal
         open={renameOpen}
@@ -331,29 +559,80 @@ export default function SavedQrCard({
         onConfirm={handleRenameConfirm}
       />
 
+      {qrZoomOpen && previewUrl ? (
+        <div
+          className="modal fade show d-block saved-qr-style-modal-backdrop dashboard-qr-zoom-backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`dashboard-qr-zoom-title-${row._id}`}
+          dir="rtl"
+          onClick={() => setQrZoomOpen(false)}
+        >
+          <div
+            className="modal-dialog modal-dialog-centered dashboard-qr-zoom-dialog"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-content border-0 shadow-lg">
+              <div className="modal-header border-0 py-2 px-3 align-items-center">
+                <h5
+                  className="modal-title fs-6 mb-0 text-truncate pe-2"
+                  id={`dashboard-qr-zoom-title-${row._id}`}
+                >
+                  {cardTitle(row)}
+                </h5>
+                <button
+                  type="button"
+                  className="btn btn-link text-secondary p-1 ms-auto flex-shrink-0"
+                  aria-label="סגור"
+                  onClick={() => setQrZoomOpen(false)}
+                >
+                  <FiX size={22} aria-hidden />
+                </button>
+              </div>
+              <div className="modal-body text-center pt-0 pb-4 px-3">
+                <img
+                  src={previewUrl}
+                  alt=""
+                  className="dashboard-qr-zoom-img"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div
         className="card-body dashboard-qr-card-body d-flex flex-column flex-lg-row gap-3 gap-lg-4 align-items-lg-stretch"
         dir="rtl"
       >
         <div className="dashboard-qr-col-preview d-flex flex-column align-items-center gap-2 flex-shrink-0">
-          <div className="dashboard-qr-thumb d-flex align-items-center justify-content-center bg-light rounded-3 overflow-hidden">
-            {previewLoading ? (
+          {previewLoading ? (
+            <div className="dashboard-qr-thumb d-flex align-items-center justify-content-center bg-light rounded-3 overflow-hidden">
               <span
                 className="spinner-border spinner-border-sm text-secondary"
                 role="status"
               />
-            ) : previewUrl ? (
+            </div>
+          ) : previewUrl ? (
+            <button
+              type="button"
+              className="dashboard-qr-thumb dashboard-qr-thumb--zoom d-flex align-items-center justify-content-center bg-light rounded-3 overflow-hidden"
+              onClick={() => setQrZoomOpen(true)}
+              aria-label={`הגדלת QR — ${cardTitle(row)}`}
+            >
               <img
                 src={previewUrl}
                 alt=""
                 className="dashboard-qr-thumb-img"
               />
-            ) : (
+            </button>
+          ) : (
+            <div className="dashboard-qr-thumb d-flex align-items-center justify-content-center bg-light rounded-3 overflow-hidden">
               <span className="small text-muted px-2 text-center">
                 אין תצוגה מקדימה
               </span>
-            )}
-          </div>
+            </div>
+          )}
           <button
             type="button"
             className="btn btn-outline-secondary btn-sm dashboard-qr-download w-100"
@@ -363,6 +642,15 @@ export default function SavedQrCard({
             <FiDownload className="me-1" aria-hidden />
             הורדה
           </button>
+          {row.linkMode === "dynamic" ? (
+            <button
+              type="button"
+              className="btn btn-teal btn-sm dashboard-qr-download w-100"
+              onClick={() => setStatsModalOpen(true)}
+            >
+              סטטיסטיקות
+            </button>
+          ) : null}
         </div>
 
         <div className="dashboard-qr-col-meta flex-grow-1 min-w-0" dir="rtl">
@@ -418,23 +706,17 @@ export default function SavedQrCard({
               className="d-flex flex-nowrap align-items-start gap-1 min-w-0 mw-100"
               dir="ltr"
             >
-              <button
-                type="button"
-                className="btn btn-link btn-sm p-0 m-0 text-secondary flex-shrink-0 dashboard-qr-destination-edit-btn"
-                title={
-                  row.linkMode === "dynamic"
-                    ? "עריכת יעד הפניה"
-                    : "עריכת היעד במחולל"
-                }
-                aria-label={
-                  row.linkMode === "dynamic"
-                    ? "עריכת יעד הפניה"
-                    : "עריכת היעד במחולל"
-                }
-                onClick={handleEditDestination}
-              >
-                <FiEdit2 size={16} aria-hidden />
-              </button>
+              {row.linkMode === "dynamic" ? (
+                <button
+                  type="button"
+                  className="btn btn-link btn-sm p-0 m-0 text-secondary flex-shrink-0 dashboard-qr-destination-edit-btn"
+                  title="עריכת יעד הפניה"
+                  aria-label="עריכת יעד הפניה"
+                  onClick={handleEditDestination}
+                >
+                  <FiEdit2 size={16} aria-hidden />
+                </button>
+              ) : null}
               <span
                 className="min-w-0 text-break"
                 title={destinationSummary(row)}
@@ -463,24 +745,29 @@ export default function SavedQrCard({
             </div>
           ) : null}
 
-          <div className="dashboard-qr-active-row d-flex align-items-center gap-2 flex-wrap mb-3">
-            <span className="dashboard-qr-active-label">פעיל</span>
-            <span dir="ltr" className="d-inline-flex align-items-center">
-              <label className="dashboard-qr-toggle-mini mb-0">
-                <span className="visually-hidden">
-                  הפעלה או השבתה של הקוד השמור
-                </span>
-                <input
-                  type="checkbox"
-                  className="dashboard-qr-toggle-mini-input"
-                  checked={isActive}
-                  disabled={activeBusy}
-                  onChange={handleActiveChange}
-                />
-                <span className="dashboard-qr-toggle-mini-track" aria-hidden="true" />
-              </label>
-            </span>
-          </div>
+          {row.linkMode === "dynamic" ? (
+            <div className="dashboard-qr-active-row d-flex align-items-center gap-2 flex-wrap mb-3">
+              <span className="dashboard-qr-active-label">פעיל</span>
+              <span dir="ltr" className="d-inline-flex align-items-center">
+                <label className="dashboard-qr-toggle-mini mb-0">
+                  <span className="visually-hidden">
+                    הפעלה או השבתה של הקוד השמור
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="dashboard-qr-toggle-mini-input"
+                    checked={isActive}
+                    disabled={activeBusy}
+                    onChange={handleActiveChange}
+                  />
+                  <span
+                    className="dashboard-qr-toggle-mini-track"
+                    aria-hidden="true"
+                  />
+                </label>
+              </span>
+            </div>
+          ) : null}
 
           <div
             className="dashboard-qr-folder-row position-relative mb-3 w-100"
@@ -536,19 +823,6 @@ export default function SavedQrCard({
             ) : null}
           </div>
 
-          {row.linkMode !== "dynamic" && row.qrType === "url" ? (
-            <div className="pt-2 pb-1">
-              <button
-                type="button"
-                className="btn btn-outline-teal btn-sm dashboard-qr-action-labeled d-inline-flex align-items-center gap-1"
-                onClick={() => void handleEnableDynamic()}
-                disabled={linkModeBusy}
-              >
-                <FiLink size={16} aria-hidden />
-                הפוך לדינמי
-              </button>
-            </div>
-          ) : null}
             </div>
 
             <div className="dashboard-qr-card-actions-col">

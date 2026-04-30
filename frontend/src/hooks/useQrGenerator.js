@@ -349,7 +349,7 @@ export function useQrGenerator() {
       qrType,
       qrValue: String(qrValue || "").trim(),
       displayName: nameExtra,
-      linkMode: qrType === "url" && linkMode === "dynamic" ? "dynamic" : "static",
+      linkMode: linkMode === "dynamic" ? "dynamic" : "static",
       qrInputs,
       style: {
         fgColor,
@@ -425,11 +425,18 @@ export function useQrGenerator() {
 
   const saveQr = useCallback(async (displayName) => {
     if (!qrImage) return false;
-    if (linkMode === "dynamic" && qrType === "url" && !publicSlug) {
-      const u = String(qrInputs?.url || "").trim();
-      if (!/^https?:\/\//i.test(u)) {
-        setSaveQrMessage("לקישור דינמי נדרש כתובת http או https תקינה");
+    if (linkMode === "dynamic" && !publicSlug) {
+      const built = String(buildEncodedQrText(qrType, qrInputs) || "").trim();
+      if (!built) {
+        setSaveQrMessage("נא למלא את פרטי הקוד לפני שמירה במצב דינמי");
         return false;
+      }
+      if (qrType === "url") {
+        const u = String(qrInputs?.url || "").trim();
+        if (!/^https?:\/\//i.test(u)) {
+          setSaveQrMessage("לקישור דינמי נדרש כתובת http או https תקינה");
+          return false;
+        }
       }
     }
     const nameTrim = String(displayName ?? "").trim();

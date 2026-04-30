@@ -69,6 +69,47 @@ npm run dev
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:5000`
 
+## פריסה חינמית (Render) כדי ש-QR דינמי יעבוד גם בטלפון
+
+כדי שסריקה מהטלפון תעבוד, ה-QR הדינמי חייב להפנות לכתובת ציבורית (לא `localhost`).
+
+### 1) פריסת Backend ל-Render
+
+הפרויקט כולל `render.yaml` בשורש, לכן אפשר לפרוס ישירות מ-GitHub.
+
+ב-Render:
+
+1. יוצרים `New +` -> `Blueprint`.
+2. בוחרים את הריפו.
+3. מאשרים יצירה של השירות `qr-code-creator-backend`.
+4. מגדירים Environment Variables (לפחות):
+   - `MONGO_URI` (Mongo Atlas)
+   - `SESSION_SECRET`
+   - `JWT_SECRET`
+   - `FRONTEND_URL` (דומיין הפרונט שלך)
+   - `BACKEND_URL` (דומיין ה-Render שקיבלת)
+
+### 2) הגדרת Frontend לדומיין הציבורי של ה-Backend
+
+יוצרים קובץ `frontend/.env` לפי `frontend/.env.example`:
+
+```env
+VITE_API_URL=https://your-backend-domain.onrender.com
+VITE_PUBLIC_QR_BASE=https://your-backend-domain.onrender.com
+```
+
+אחר כך בונים ומעלים את ה-frontend מחדש.
+
+### 3) בדיקה מהירה מהטלפון
+
+1. מייצרים QR דינמי חדש.
+2. מוודאים שהקישור המקודד נראה כמו:
+   `https://your-backend-domain.onrender.com/api/r/<slug>`
+3. סורקים מהטלפון ומוודאים:
+   - יש הפניה ליעד
+   - המונה/סטטיסטיקה מתעדכנים בדשבורד
+4. משנים יעד URL ל-QR קיים ובודקים שהסריקה הבאה מפנה ליעד החדש.
+
 ## איך משתמשים
 
 1. בוחרים סוג QR.

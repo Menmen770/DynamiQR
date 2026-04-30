@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FiLock, FiUser } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLock, FiUser } from "react-icons/fi";
 import { API_BASE } from "../config";
 
 /**
@@ -16,6 +16,9 @@ export default function DashboardAccountPanel({ onClose }) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [profileMsg, setProfileMsg] = useState({ type: "", text: "" });
   const [passwordMsg, setPasswordMsg] = useState({ type: "", text: "" });
   const [savingProfile, setSavingProfile] = useState(false);
@@ -181,7 +184,7 @@ export default function DashboardAccountPanel({ onClose }) {
                 </div>
                 {email ? (
                   <p className="small text-muted mb-2">
-                    אימייל (לא ניתן לשינוי כאן):{" "}
+                    אימייל:{" "}
                     <span className="user-select-all">{email}</span>
                   </p>
                 ) : null}
@@ -215,41 +218,68 @@ export default function DashboardAccountPanel({ onClose }) {
                   <label className="dashboard-account-label small fw-semibold text-secondary d-block mb-1">
                     סיסמה נוכחית
                   </label>
-                  <div className="dashboard-search-shell mb-2">
+                  <div className="dashboard-search-shell dashboard-search-shell--password mb-2">
                     <FiLock className="dashboard-search-icon" aria-hidden />
                     <input
-                      type="password"
-                      className="form-control dashboard-search-input"
+                      type={showCurrentPassword ? "text" : "password"}
+                      className="form-control dashboard-search-input dashboard-search-input--password"
                       autoComplete="current-password"
                       value={currentPassword}
                       onChange={(ev) => setCurrentPassword(ev.target.value)}
                     />
+                    <button
+                      type="button"
+                      className="dashboard-password-visibility-toggle"
+                      onClick={() => setShowCurrentPassword((prev) => !prev)}
+                      aria-label={showCurrentPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+                      aria-pressed={showCurrentPassword}
+                    >
+                      {showCurrentPassword ? <FiEyeOff /> : <FiEye />}
+                    </button>
                   </div>
                   <label className="dashboard-account-label small fw-semibold text-secondary d-block mb-1">
                     סיסמה חדשה
                   </label>
-                  <div className="dashboard-search-shell mb-2">
+                  <div className="dashboard-search-shell dashboard-search-shell--password mb-2">
                     <FiLock className="dashboard-search-icon" aria-hidden />
                     <input
-                      type="password"
-                      className="form-control dashboard-search-input"
+                      type={showNewPassword ? "text" : "password"}
+                      className="form-control dashboard-search-input dashboard-search-input--password"
                       autoComplete="new-password"
                       value={newPassword}
                       onChange={(ev) => setNewPassword(ev.target.value)}
                     />
+                    <button
+                      type="button"
+                      className="dashboard-password-visibility-toggle"
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      aria-label={showNewPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+                      aria-pressed={showNewPassword}
+                    >
+                      {showNewPassword ? <FiEyeOff /> : <FiEye />}
+                    </button>
                   </div>
                   <label className="dashboard-account-label small fw-semibold text-secondary d-block mb-1">
                     אימות סיסמה חדשה
                   </label>
-                  <div className="dashboard-search-shell mb-2">
+                  <div className="dashboard-search-shell dashboard-search-shell--password mb-2">
                     <FiLock className="dashboard-search-icon" aria-hidden />
                     <input
-                      type="password"
-                      className="form-control dashboard-search-input"
+                      type={showConfirmPassword ? "text" : "password"}
+                      className="form-control dashboard-search-input dashboard-search-input--password"
                       autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(ev) => setConfirmPassword(ev.target.value)}
                     />
+                    <button
+                      type="button"
+                      className="dashboard-password-visibility-toggle"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      aria-label={showConfirmPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+                      aria-pressed={showConfirmPassword}
+                    >
+                      {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                    </button>
                   </div>
                   {passwordMsg.text ? (
                     <p

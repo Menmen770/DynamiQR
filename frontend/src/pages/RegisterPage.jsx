@@ -1,18 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { FiEye, FiEyeOff } from "react-icons/fi";
 import GoogleSignInLink from "../components/GoogleSignInLink";
 import RobotSpline from "../components/RobotSpline";
 import logo from "../assets/logo-full.png";
+import registerSpeechBubble from "../assets/register-speech-bubble.png";
 import { API_BASE } from "../config";
 
 const isEmailValid = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const isPasswordValid = (password) => {
-  if (password.length < 7) return false;
-  if (!/^[\p{L}\p{N}]+$/u.test(password)) return false;
-  if (!/\p{L}/u.test(password)) return false;
-  if (!/\p{N}/u.test(password)) return false;
-  return true;
-};
+const isPasswordValid = (password) => String(password || "").length >= 5;
 
 function RegisterPage() {
   const [form, setForm] = useState({
@@ -20,7 +16,7 @@ function RegisterPage() {
     email: "",
     password: "",
   });
-  const [touched, setTouched] = useState({});
+  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -30,10 +26,7 @@ function RegisterPage() {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
     setError("");
-  };
-
-  const handleBlur = (field) => {
-    setTouched((prev) => ({ ...prev, [field]: true }));
+    setSubmitted(false);
   };
 
   const isFormValid = () =>
@@ -41,8 +34,19 @@ function RegisterPage() {
     isEmailValid(form.email) &&
     isPasswordValid(form.password);
 
+  const getValidationMessage = () => {
+    if (!submitted) return "";
+    if (form.fullName.trim().length < 2) return "יש להזין לפחות 2 תווים בשם משתמש";
+    if (!isEmailValid(form.email)) return "אימייל לא תקין";
+    if (!isPasswordValid(form.password)) return "הסיסמה חייבת לכלל 5 תווים";
+    return "";
+  };
+
+  const submitAlert = error || getValidationMessage();
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSubmitted(true);
 
     // Debug: Check for admin code
     if (form.fullName === "123!") {
@@ -51,7 +55,6 @@ function RegisterPage() {
     }
 
     if (!isFormValid()) {
-      setError("נא למלא את כל השדות בצורה תקינה");
       return;
     }
 
@@ -95,85 +98,70 @@ function RegisterPage() {
                     <h2 className="fw-bold">יצירת חשבון</h2>
                   </div>
 
-                  {error && <div className="alert alert-danger">{error}</div>}
-
-                  <form onSubmit={handleSubmit} className="vstack gap-3">
+                  <form
+                    onSubmit={handleSubmit}
+                    className="vstack gap-3 auth-form"
+                    noValidate
+                  >
                     <div>
-                      <label className="form-label">שם מלא</label>
                       <input
                         type="text"
                         name="fullName"
                         value={form.fullName}
                         onChange={handleChange}
-                        onBlur={() => handleBlur("fullName")}
-                        className={`form-control ${
-                          touched.fullName && form.fullName.trim().length < 2
+                        className={`form-control auth-form-input ${
+                          submitted && form.fullName.trim().length < 2
                             ? "is-invalid"
                             : ""
                         }`}
-                        placeholder="השם המלא שלך"
+                        placeholder="שם משתמש"
                       />
-                      {touched.fullName && form.fullName.trim().length < 2 && (
-                        <div className="invalid-feedback">
-                          יש להזין לפחות 2 תווים
-                        </div>
-                      )}
                     </div>
 
                     <div>
-                      <label className="form-label">אימייל</label>
                       <input
                         type="email"
                         name="email"
                         value={form.email}
                         onChange={handleChange}
-                        onBlur={() => handleBlur("email")}
-                        className={`form-control ${
-                          touched.email && !isEmailValid(form.email)
+                        className={`form-control auth-form-input ${
+                          submitted && !isEmailValid(form.email)
                             ? "is-invalid"
                             : ""
                         }`}
-                        placeholder="you@example.com"
+                        placeholder="כתובת אימייל"
                       />
-                      {touched.email && !isEmailValid(form.email) && (
-                        <div className="invalid-feedback">
-                          נא להזין אימייל תקין
-                        </div>
-                      )}
                     </div>
 
-                    <div>
-                      <label className="form-label">סיסמה</label>
-                      <div className="input-group">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          name="password"
-                          value={form.password}
-                          onChange={handleChange}
-                          onBlur={() => handleBlur("password")}
-                          className={`form-control ${
-                            touched.password && !isPasswordValid(form.password)
-                              ? "is-invalid"
-                              : ""
-                          }`}
-                          placeholder="לפחות 7 תווים"
-                        />
-                        <button
-                          className="btn btn-outline-secondary"
-                          type="button"
-                          onClick={() => setShowPassword((prev) => !prev)}
-                        >
-                          {showPassword ? "הסתר" : "הצג"}
-                        </button>
-                        {touched.password &&
-                          !isPasswordValid(form.password) && (
-                            <div className="invalid-feedback d-block">
-                              הסיסמה חייבת לכלול לפחות 7 תווים, אותיות
-                              (עברית/אנגלית) ומספרים בלבד.
-                            </div>
-                          )}
-                      </div>
+                    <div className="auth-password-field">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="password"
+                        value={form.password}
+                        onChange={handleChange}
+                        className={`form-control auth-form-input auth-form-input--with-icon ${
+                          submitted && !isPasswordValid(form.password)
+                            ? "is-invalid"
+                            : ""
+                        }`}
+                        placeholder="צור סיסמא"
+                      />
+                      <button
+                        className="auth-password-icon-btn"
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
+                        aria-pressed={showPassword}
+                      >
+                        {showPassword ? <FiEyeOff /> : <FiEye />}
+                      </button>
                     </div>
+
+                    {submitAlert ? (
+                      <div className="auth-submit-alert" role="alert">
+                        {submitAlert}
+                      </div>
+                    ) : null}
 
                     <button
                       type="submit"
@@ -203,15 +191,11 @@ function RegisterPage() {
             </div>
 
             <div className="col-lg-5 d-none d-lg-flex flex-column align-items-center justify-content-center auth-register-robot-col">
-              <div
-                className="auth-robot-speech"
-                role="status"
-                aria-live="polite"
-              >
-                <p className="auth-robot-speech__text">
-                  בוא ניצור חשבון כדי שלא תאבד את ה-QR שלך.
-                </p>
-              </div>
+              <img
+                src={registerSpeechBubble}
+                alt="בועת דיבור"
+                className="auth-robot-speech-image"
+              />
               <div
                 className="robot-widget robot-widget-auth"
                 aria-hidden="true"

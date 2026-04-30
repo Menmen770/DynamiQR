@@ -10,6 +10,7 @@ mobile/.expo/
 **/.env.*
 **/*.env
 **/*.env.*
+!**/.env.example
 
 # OAuth / Google credentials
 **/client_secret*.json
@@ -27,6 +28,7 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Temporary files
 *.tmp

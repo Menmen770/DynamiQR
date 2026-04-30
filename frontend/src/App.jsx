@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet, useLocation } from "react-router-dom";
 import QrPage from "./pages/QrPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
@@ -48,13 +48,17 @@ function ProtectedLayout() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/register" replace />;
   }
 
   return <Outlet />;
 }
 
 function App() {
+  const location = useLocation();
+  const isAuthPage =
+    location.pathname === "/login" || location.pathname === "/register";
+
   return (
     <>
       <MainNavbar />
@@ -72,7 +76,7 @@ function App() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy-terms" element={<PrivacyTermsPage />} />
       </Routes>
-      <SiteFooter />
+      {!isAuthPage ? <SiteFooter /> : null}
     </>
   );
 }

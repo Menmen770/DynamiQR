@@ -12,11 +12,26 @@ const connectMongoDB = async () => {
     return;
   }
 
+  const isAtlasSrv = String(MONGO_URI).includes("mongodb+srv://");
+  const connectOptions = {
+    serverSelectionTimeoutMS: isAtlasSrv ? 20000 : 5000,
+    connectTimeoutMS: isAtlasSrv ? 20000 : 10000,
+  };
+  if (isAtlasSrv && process.env.MONGODB_SERVER_API === "1") {
+    connectOptions.serverApi = {
+      version: "1",
+      strict: true,
+      deprecationErrors: true,
+    };
+  }
+
   try {
-    await mongoose.connect(MONGO_URI, {
-      serverSelectionTimeoutMS: 5000,
-    });
-    console.log("MongoDB connected");
+    await mongoose.connect(MONGO_URI, connectOptions);
+    console.log(
+      isAtlasSrv
+        ? "MongoDB connected (Atlas / SRV)"
+        : "MongoDB connected",
+    );
   } catch (error) {
     console.error("MongoDB connection error:", error.message);
   }
