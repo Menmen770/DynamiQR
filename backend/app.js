@@ -12,6 +12,11 @@ const dashboardFolderRoutes = require("./routes/dashboardFolders");
 function createApp() {
   const app = express();
 
+  // Render/Reverse proxy: required so secure cookies from express-session are set correctly in production.
+  if (process.env.NODE_ENV === "production") {
+    app.set("trust proxy", 1);
+  }
+
   app.use(
     cors({
       origin: true,
