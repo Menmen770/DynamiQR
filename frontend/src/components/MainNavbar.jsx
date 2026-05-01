@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiBookOpen, FiGrid, FiLogOut, FiPlusCircle } from "react-icons/fi";
 import logo from "../assets/logo-full.png";
 import { API_BASE } from "../config";
+import { clearAuthToken } from "../utils/authSession";
 
 const getGreetingByHour = () => {
   const hour = new Date().getHours();
@@ -107,6 +108,7 @@ function MainNavbar() {
     } catch (error) {
       console.error("Logout failed:", error);
     } finally {
+      clearAuthToken();
       setIsAuthenticated(false);
       setUser(null);
       setIsMenuOpen(false);

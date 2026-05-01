@@ -5,6 +5,7 @@ import RobotSpline from "../components/RobotSpline";
 import GoogleSignInLink from "../components/GoogleSignInLink";
 import logo from "../assets/logo-full.png";
 import { API_BASE } from "../config";
+import { setAuthToken } from "../utils/authSession";
 
 const isEmailValid = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isPasswordValid = (password) => String(password || "").length >= 5;
@@ -73,6 +74,9 @@ function LoginPage() {
         throw new Error(data.error || "ההתחברות נכשלה");
       }
 
+      if (data?.token) {
+        setAuthToken(data.token);
+      }
       navigate("/");
     } catch (err) {
       setError(err.message || "ההתחברות נכשלה");

@@ -6,6 +6,7 @@ import RobotSpline from "../components/RobotSpline";
 import logo from "../assets/logo-full.png";
 import registerSpeechBubble from "../assets/register-speech-bubble.png";
 import { API_BASE } from "../config";
+import { setAuthToken } from "../utils/authSession";
 
 const isEmailValid = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const isPasswordValid = (password) => String(password || "").length >= 5;
@@ -78,6 +79,9 @@ function RegisterPage() {
         throw new Error(data.error || "ההרשמה נכשלה");
       }
 
+      if (data?.token) {
+        setAuthToken(data.token);
+      }
       navigate("/");
     } catch (err) {
       setError(err.message || "ההרשמה נכשלה");
