@@ -6,10 +6,29 @@ import "./index.css";
 import "./App.css";
 import App from "./App.jsx";
 import { API_BASE } from "./config";
-import { getAuthToken } from "./utils/authSession";
+import { getAuthToken, setAuthToken } from "./utils/authSession";
 
 document.documentElement.lang = "he";
 document.documentElement.dir = "rtl";
+
+/** OAuth (Google/Facebook) returns here with JWT in hash — must run before first /auth/me. */
+if (typeof window !== "undefined") {
+  const { hash } = window.location;
+  const prefix = "#access_token=";
+  if (hash.startsWith(prefix)) {
+    try {
+      const token = decodeURIComponent(hash.slice(prefix.length));
+      if (token) setAuthToken(token);
+    } catch {
+      /* ignore malformed hash */
+    }
+    window.history.replaceState(
+      null,
+      document.title,
+      window.location.pathname + window.location.search,
+    );
+  }
+}
 
 if (typeof window !== "undefined" && typeof window.fetch === "function") {
   const nativeFetch = window.fetch.bind(window);

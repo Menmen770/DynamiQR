@@ -32,3 +32,13 @@
 ## הפעלה
 
 אחרי מילוי ה־`.env`, הפעל מחדש את ה-backend. כפתורי ההתחברות עם גוגל ופייסבוק יופיעו בדפי ההתחברות וההרשמה.
+
+## פרודקשן (Render)
+
+ב־Environment של ה־backend חייבים:
+
+- `BACKEND_URL` — כתובת הבאקאנד (למשל `https://your-api.onrender.com`) — **חייב** להתאים ל־**Authorized redirect URI** בגוגל:  
+  `{BACKEND_URL}/api/auth/google/callback`
+- `FRONTEND_URL` — כתובת האתר (למשל `https://your-site.onrender.com`)
+
+אחרי התחברות מוצלחת, השרת מפנה ל־`FRONTEND_URL` עם JWT ב־hash (`#access_token=...`) כדי שהאתר יזהה משתמש גם כש־cookies חסומים בין דומיינים.

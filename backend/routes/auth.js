@@ -11,6 +11,18 @@ const {
 
 const router = express.Router();
 
+function redirectFrontendWithToken(res, userId) {
+  const token = signAccessToken(String(userId));
+  try {
+    const u = new URL(FRONTEND_URL);
+    u.hash = `access_token=${encodeURIComponent(token)}`;
+    return res.redirect(u.toString());
+  } catch {
+    const base = String(FRONTEND_URL || "").replace(/\/$/, "");
+    return res.redirect(`${base}#access_token=${encodeURIComponent(token)}`);
+  }
+}
+
 router.post("/auth/register", async (req, res) => {
   const { fullName, email, password } = req.body;
 
@@ -203,7 +215,7 @@ router.get(
   }),
   (req, res) => {
     req.session.userId = req.user._id.toString();
-    res.redirect(FRONTEND_URL);
+    redirectFrontendWithToken(res, req.user._id);
   },
 );
 
@@ -222,7 +234,7 @@ router.get(
   }),
   (req, res) => {
     req.session.userId = req.user._id.toString();
-    res.redirect(FRONTEND_URL);
+    redirectFrontendWithToken(res, req.user._id);
   },
 );
 
