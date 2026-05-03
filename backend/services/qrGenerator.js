@@ -33,7 +33,12 @@ async function applyCutoutOnly(qrBuffer, logoShape = "square") {
   return canvas.toBuffer("image/png");
 }
 
-async function addLogoWithCutout(qrBuffer, imageSource, logoShape = "square") {
+async function addLogoWithCutout(
+  qrBuffer,
+  imageSource,
+  logoShape = "square",
+  logoInsetScale = 1,
+) {
   const qrImage = await nodeCanvas.loadImage(qrBuffer);
   const canvas = nodeCanvas.createCanvas(qrImage.width, qrImage.height);
   const ctx = canvas.getContext("2d");
@@ -42,7 +47,11 @@ async function addLogoWithCutout(qrBuffer, imageSource, logoShape = "square") {
   const centerX = qrImage.width / 2;
   const centerY = qrImage.height / 2;
   const cutoutSize = Math.min(qrImage.width, qrImage.height) * 0.38;
-  const logoSize = cutoutSize * 0.68;
+  const insetMul = Math.min(
+    1,
+    Math.max(0.1, Number(logoInsetScale) || 1),
+  );
+  const logoSize = cutoutSize * 0.68 * insetMul;
 
   try {
     const logoImage = await nodeCanvas.loadImage(imageSource);
@@ -119,6 +128,7 @@ async function generateQrDataUrl(body) {
     image = null,
     logoShape = "square",
     errorCorrectionLevel = "Q",
+    logoInsetScale = 1,
   } = body;
 
   if (!text) {
@@ -172,7 +182,12 @@ async function generateQrDataUrl(body) {
   let finalBuffer = qrBuffer;
 
   if (image) {
-    finalBuffer = await addLogoWithCutout(qrBuffer, image, logoShape);
+    finalBuffer = await addLogoWithCutout(
+      qrBuffer,
+      image,
+      logoShape,
+      logoInsetScale,
+    );
   } else if (logoShape === "square" || logoShape === "circle") {
     finalBuffer = await applyCutoutOnly(qrBuffer, logoShape);
   }

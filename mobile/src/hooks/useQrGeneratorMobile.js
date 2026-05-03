@@ -22,6 +22,7 @@ export function useQrGeneratorMobile() {
   const [logoShape, setLogoShape] = useState("square");
   const [logoInputMode, setLogoInputMode] = useState("preset");
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoInsetScale, setLogoInsetScale] = useState(1);
   const [logoLoadingPreset, setLogoLoadingPreset] = useState(false);
 
   const [qrImage, setQrImage] = useState(null);
@@ -61,6 +62,7 @@ export function useQrGeneratorMobile() {
 
     if (logoUrl) {
       body.image = logoUrl;
+      body.logoInsetScale = logoInsetScale;
     }
 
     try {
@@ -126,6 +128,7 @@ export function useQrGeneratorMobile() {
     stickerType,
     logoShape,
     logoUrl,
+    logoInsetScale,
   ]);
 
   useEffect(() => {
@@ -135,7 +138,15 @@ export function useQrGeneratorMobile() {
     return () => clearTimeout(t);
   }, [generateQr]);
 
-  const selectPresetLogo = useCallback(async (moduleRef) => {
+  const selectPresetLogo = useCallback(async (preset) => {
+    const moduleRef = preset?.module ?? preset;
+    const inset =
+      preset && typeof preset === "object" && "rasterInset" in preset
+        ? preset.rasterInset
+        : 1;
+    const insetNum =
+      Number(inset) >= 0.1 && Number(inset) <= 1 ? Number(inset) : 1;
+    setLogoInsetScale(insetNum);
     setLogoLoadingPreset(true);
     setLogoInputMode("preset");
     try {
@@ -151,6 +162,7 @@ export function useQrGeneratorMobile() {
 
   const clearLogo = useCallback(() => {
     setLogoUrl("");
+    setLogoInsetScale(1);
   }, []);
 
   return {
@@ -176,6 +188,7 @@ export function useQrGeneratorMobile() {
     setLogoInputMode,
     logoUrl,
     setLogoUrl,
+    setLogoInsetScale,
     logoLoadingPreset,
     selectPresetLogo,
     clearLogo,

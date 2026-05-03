@@ -3,7 +3,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import RobotSpline from "../components/RobotSpline";
 import GoogleSignInLink from "../components/GoogleSignInLink";
-import logo from "../assets/logo-full.png";
 import { API_BASE } from "../config";
 import { setAuthToken } from "../utils/authSession";
 

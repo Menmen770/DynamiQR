@@ -205,9 +205,9 @@ export default function SavedQrStyleEditModal({
         className="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="modal-content border-0 shadow">
-          <div className="modal-header border-0">
-            <h2 className="modal-title h5 fw-bold" id="saved-qr-style-modal-title">
+        <div className="modal-content border-0 shadow rounded-4 overflow-hidden">
+          <div className="modal-header border-0 dashboard-float-modal-header">
+            <h2 className="modal-title h5 fw-bold mb-0 flex-grow-1 min-w-0" id="saved-qr-style-modal-title">
               עריכת עיצוב
             </h2>
             <button
@@ -283,7 +283,6 @@ export default function SavedQrStyleEditModal({
                   handleLogoDragOver={handleLogoDragOver}
                   handleLogoDragLeave={handleLogoDragLeave}
                   handleLogoFileSelect={handleLogoFileSelect}
-                  loading={previewLoading}
                 />
               </div>
             </div>

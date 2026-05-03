@@ -71,6 +71,7 @@ export default function QrGeneratorScreen() {
     setLogoInputMode,
     logoUrl,
     setLogoUrl,
+    setLogoInsetScale,
     logoLoadingPreset,
     selectPresetLogo,
     clearLogo,
@@ -102,6 +103,7 @@ export default function QrGeneratorScreen() {
     setLogoInputMode("gallery");
     const a = res.assets[0];
     const mime = a.mimeType || "image/jpeg";
+    setLogoInsetScale(1);
     setLogoUrl(`data:${mime};base64,${a.base64}`);
     setSelectedPresetId(null);
     setError("");
@@ -355,7 +357,7 @@ export default function QrGeneratorScreen() {
                     <TouchableOpacity
                       key={m.id}
                       onPress={() => {
-                        setLogoUrl("");
+                        clearLogo();
                         setSelectedPresetId(null);
                         setLogoInputMode(m.id);
                       }}
@@ -389,7 +391,7 @@ export default function QrGeneratorScreen() {
                         disabled={logoLoadingPreset}
                         onPress={async () => {
                           setSelectedPresetId(p.id);
-                          await selectPresetLogo(p.module);
+                          await selectPresetLogo(p);
                         }}
                         borderColor={colors.border}
                         activeBorderColor={colors.primary}
@@ -413,6 +415,7 @@ export default function QrGeneratorScreen() {
                       logoUrl?.startsWith("data:") ? "" : logoUrl
                     }
                     onChangeText={(t) => {
+                      setLogoInsetScale(1);
                       setLogoUrl(t);
                       setError("");
                     }}

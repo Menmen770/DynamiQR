@@ -10,6 +10,10 @@ import telegramSvg from "../assets/preset-logos/telegram.svg?raw";
 import spotifySvg from "../assets/preset-logos/spotify.svg?raw";
 import googleSvg from "../assets/preset-logos/google.svg?raw";
 import githubSvg from "../assets/preset-logos/github.svg?raw";
+import youtubeSvg from "../assets/preset-logos/youtube.svg?raw";
+import tiktokSvg from "../assets/preset-logos/tiktok.svg?raw";
+import xSvg from "../assets/preset-logos/x.svg?raw";
+import bitSvg from "../assets/preset-logos/Bit.svg?raw";
 
 function svgDataUrl(svg) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
@@ -25,6 +29,10 @@ const PRESET_DEFS = [
   { id: "spotify", name: "Spotify", svg: spotifySvg },
   { id: "google", name: "Google", svg: googleSvg, rasterInset: 0.88 },
   { id: "github", name: "GitHub", svg: githubSvg },
+  { id: "youtube", name: "YouTube", svg: youtubeSvg, rasterInset: 0.88 },
+  { id: "tiktok", name: "TikTok", svg: tiktokSvg },
+  { id: "x", name: "X", svg: xSvg, rasterInset: 0.88 },
+  { id: "bit", name: "Bit", svg: bitSvg, rasterInset: 0.88 },
 ];
 
 export const PRESET_BRAND_LOGOS = PRESET_DEFS.map((p) => ({

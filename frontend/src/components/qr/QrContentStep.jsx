@@ -24,34 +24,34 @@ function QrContentStep({
   return (
     <>
       {qrType === "url" && (
-        <div>
+        <div className="qr-url-with-mode-row">
           <input
             type="url"
             value={qrInputs.url}
             onChange={(e) => handleInputChange("url", e.target.value)}
             placeholder="https://example.com"
-            className="form-control form-control-lg"
+            className="form-control form-control-lg qr-url-with-mode-input"
           />
-          <div className="qr-segmented-row mt-3">
-            <QrLinkModeToggle
-              linkMode={linkMode}
-              onChange={onLinkModeChange}
-            />
-          </div>
+          <QrLinkModeToggle
+            linkMode={linkMode}
+            onChange={onLinkModeChange}
+          />
         </div>
       )}
 
       {qrType === "pdf" && (
         <div>
-          <div className="qr-segmented-row mb-3">
+          <div className="qr-segmented-row mb-2">
             <QrPdfInputModeToggle
               pdfInputMode={pdfInputMode}
               onChange={setPdfInputMode}
             />
-            <QrLinkModeToggle
-              linkMode={linkMode}
-              onChange={onLinkModeChange}
-            />
+            {pdfInputMode === "file" ? (
+              <QrLinkModeToggle
+                linkMode={linkMode}
+                onChange={onLinkModeChange}
+              />
+            ) : null}
           </div>
 
           {pdfInputMode === "file" ? (
@@ -110,13 +110,19 @@ function QrContentStep({
             </>
           ) : (
             <>
-              <input
-                type="url"
-                value={qrInputs.pdf}
-                onChange={(e) => handleInputChange("pdf", e.target.value)}
-                placeholder="https://example.com/document.pdf"
-                className="form-control form-control-lg"
-              />
+              <div className="qr-url-with-mode-row">
+                <input
+                  type="url"
+                  value={qrInputs.pdf}
+                  onChange={(e) => handleInputChange("pdf", e.target.value)}
+                  placeholder="https://example.com/document.pdf"
+                  className="form-control form-control-lg qr-url-with-mode-input"
+                />
+                <QrLinkModeToggle
+                  linkMode={linkMode}
+                  onChange={onLinkModeChange}
+                />
+              </div>
               <div className="form-text">הדבק כאן URL של קובץ PDF</div>
             </>
           )}
@@ -124,7 +130,7 @@ function QrContentStep({
       )}
 
       {qrType === "whatsapp" && (
-        <div className="vstack gap-3">
+        <div className="vstack gap-2">
           <div>
             <label className="form-label">מספר טלפון</label>
             <input
@@ -154,7 +160,7 @@ function QrContentStep({
       )}
 
       {qrType === "email" && (
-        <div className="vstack gap-3">
+        <div className="vstack gap-2">
           <div>
             <label className="form-label">כתובת אימייל</label>
             <input
@@ -209,7 +215,7 @@ function QrContentStep({
       )}
 
       {qrType === "sms" && (
-        <div className="vstack gap-3">
+        <div className="vstack gap-2">
           <div>
             <label className="form-label">מספר טלפון</label>
             <input
@@ -239,7 +245,7 @@ function QrContentStep({
       )}
 
       {qrType === "wifi" && (
-        <div className="vstack gap-3">
+        <div className="vstack gap-2">
           <div>
             <label className="form-label">שם הרשת (SSID)</label>
             <input
@@ -281,7 +287,7 @@ function QrContentStep({
       )}
 
       {qrType === "contact" && (
-        <div className="vstack gap-3">
+        <div className="vstack gap-2">
           <div>
             <label className="form-label">שם מלא</label>
             <input
@@ -407,7 +413,7 @@ function QrContentStep({
       )}
 
       {qrType !== "url" && qrType !== "pdf" ? (
-        <div className="qr-segmented-row mt-3">
+        <div className="qr-segmented-row mt-2">
           <QrLinkModeToggle
             linkMode={linkMode}
             onChange={onLinkModeChange}

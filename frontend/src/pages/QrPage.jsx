@@ -114,9 +114,9 @@ function QrPage() {
 
           <div className="row g-4" style={{ alignItems: "stretch" }}>
           <div className="col-lg-7 d-flex flex-column gap-4">
-            <div className="card qr-card shadow-sm flex-grow-1">
-              <div className="card-body p-4 d-flex flex-column">
-                <div className="d-flex align-items-center gap-3 mb-3">
+            <div className="card qr-card qr-step1-card shadow-sm w-100">
+              <div className="card-body p-3">
+                <div className="d-flex align-items-center gap-2 mb-2 qr-step1-heading">
                   <span className="qr-step">1</span>
                   <h5 className="mb-0">{stepOneTitle}</h5>
                 </div>
@@ -175,7 +175,6 @@ function QrPage() {
               handleLogoDragOver={handleLogoDragOver}
               handleLogoDragLeave={handleLogoDragLeave}
               handleLogoFileSelect={handleLogoFileSelect}
-              loading={loading}
             />
           </div>
 

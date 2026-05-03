@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { FaAndroid, FaApple } from "react-icons/fa";
 import {
+  FiBarChart2,
+  FiChevronDown,
   FiClock,
   FiCopy,
   FiCornerUpLeft,
@@ -8,14 +11,14 @@ import {
   FiExternalLink,
   FiFolder,
   FiLink,
+  FiSmartphone,
   FiTrash2,
-  FiX,
 } from "react-icons/fi";
 import { API_BASE } from "../config";
 import { QR_TYPES_MAIN, QR_TYPES_MORE } from "../utils/qrConstants";
 import { effectiveSavedQrEncodedText, buildEncodedQrText } from "../utils/qrEncodedText";
 import {
-  downloadDataUrlPng,
+  downloadSavedQrFromPreviewDataUrl,
   getSavedQrPreviewDataUrl,
 } from "../utils/savedQrPreview";
 import SimpleTextModal from "./SimpleTextModal";
@@ -78,31 +81,46 @@ function percentOf(part, total) {
   return Math.round((part / total) * 100);
 }
 
-function countryCodeToFlag(codeRaw) {
-  const code = String(codeRaw || "").toUpperCase();
-  if (!/^[A-Z]{2}$/.test(code) || code === "UN") return "🌍";
-  return String.fromCodePoint(
-    code.charCodeAt(0) + 127397,
-    code.charCodeAt(1) + 127397,
-  );
+/** תווית ציר: יום.חודש מספרי בלבד (UTC), למשל 5.11 */
+function formatStatsDayNumeric(dayKey) {
+  if (!dayKey || typeof dayKey !== "string") return "";
+  const m = dayKey.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return dayKey;
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (!Number.isFinite(mo) || !Number.isFinite(d)) return dayKey;
+  return `${d}.${mo}`;
 }
 
-function pieStyleFromBreakdown(items) {
-  const total = items.reduce((s, it) => s + (it.count || 0), 0);
-  if (!total) {
-    return { background: "conic-gradient(#e2e8f0 0 100%)" };
+/** תמונת דגל (עובד גם ב-Windows; אימוג׳י לעיתים מוצג כ־IL) */
+function countryFlagImgSrc(codeRaw) {
+  const code = String(codeRaw || "").trim().toLowerCase();
+  if (!/^[a-z]{2}$/.test(code) || code === "un") return null;
+  /* flagcdn תומך במידות מוגדרות — 18x13 מחזיר 404; 24x18 תקף, הגודל ב-CSS */
+  return `https://flagcdn.com/24x18/${code}.png`;
+}
+
+/** שם תצוגה בעברית (גיבוי לקוד ISO אם השרת עדיין לא עודכן) */
+function statsCountryDisplayName(it) {
+  const label = String(it?.label || "").trim();
+  if (label && !/^[A-Za-z]{2}$/.test(label)) return label;
+  const code = String(it?.code || "UN").toUpperCase();
+  if (code === "UN") return label || "לא ידוע";
+  try {
+    const dn = new Intl.DisplayNames(["he"], { type: "region" });
+    const n = dn.of(code);
+    if (n && n !== code) return n;
+  } catch {
+    /* ignore */
   }
-  let cursor = 0;
-  const segments = items
-    .filter((it) => it.count > 0)
-    .map((it) => {
-      const span = (it.count / total) * 360;
-      const start = cursor;
-      const end = cursor + span;
-      cursor = end;
-      return `${it.color} ${start}deg ${end}deg`;
-    });
-  return { background: `conic-gradient(${segments.join(", ")})` };
+  return label || code || "—";
+}
+
+function OsStatsIcon({ osKey }) {
+  const cls = "dashboard-qr-stat-os-icon";
+  if (osKey === "ios") return <FaApple className={cls} aria-hidden />;
+  if (osKey === "android") return <FaAndroid className={cls} aria-hidden />;
+  return <FiSmartphone className={cls} aria-hidden />;
 }
 
 export default function SavedQrCard({
@@ -133,6 +151,16 @@ export default function SavedQrCard({
   const [statsError, setStatsError] = useState("");
   const [statsData, setStatsData] = useState(null);
   const [qrZoomOpen, setQrZoomOpen] = useState(false);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const [downloadFormat, setDownloadFormat] = useState("png");
+  const downloadSplitRef = useRef(null);
+
+  const downloadFormatLabels = {
+    png: "PNG",
+    svg: "SVG",
+    jpg: "JPG",
+    pdf: "PDF",
+  };
 
   const encodedInQr = useMemo(
     () => String(effectiveSavedQrEncodedText(row, API_BASE) || "").trim(),
@@ -155,7 +183,22 @@ export default function SavedQrCard({
     setStatsError("");
     setStatsLoading(false);
     setQrZoomOpen(false);
+    setDownloadMenuOpen(false);
   }, [row._id]);
+
+  useEffect(() => {
+    if (!downloadMenuOpen) return;
+    const close = (e) => {
+      if (
+        downloadSplitRef.current &&
+        !downloadSplitRef.current.contains(e.target)
+      ) {
+        setDownloadMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [downloadMenuOpen]);
 
   useEffect(() => {
     if (!qrZoomOpen) return;
@@ -222,11 +265,27 @@ export default function SavedQrCard({
     };
   }, [row]);
 
-  const handleDownload = useCallback(() => {
-    if (!previewUrl) return;
-    const safeName = String(row._id || "qr").replace(/[^\w-]/g, "");
-    downloadDataUrlPng(previewUrl, `qr-${safeName}.png`);
-  }, [previewUrl, row._id]);
+  const downloadFilenameBase = useMemo(
+    () => `qr-${String(row._id || "saved").replace(/[^\w-]/g, "")}`,
+    [row._id],
+  );
+
+  const handleDownload = useCallback(
+    (format) => {
+      if (!previewUrl) return;
+      downloadSavedQrFromPreviewDataUrl(
+        previewUrl,
+        format || downloadFormat,
+        downloadFilenameBase,
+      );
+    },
+    [previewUrl, downloadFormat, downloadFilenameBase],
+  );
+
+  const selectDownloadFormat = useCallback((format) => {
+    setDownloadFormat(format);
+    setDownloadMenuOpen(false);
+  }, []);
 
   const handleDelete = useCallback(async () => {
     if (
@@ -335,42 +394,39 @@ export default function SavedQrCard({
   const renameDefault = String(row?.displayName || "").trim();
   const isActive = row.isActive !== false;
   const totalScans = Number(statsData?.totalScans || 0);
-  const osItems = [
-    {
-      key: "ios",
-      label: "iPhone (iOS)",
-      count: Number(
-        statsData?.osBreakdown?.find((x) => x.key === "ios")?.count || 0,
-      ),
-      color: "#06b6d4",
-    },
-    {
-      key: "android",
-      label: "Android",
-      count: Number(
-        statsData?.osBreakdown?.find((x) => x.key === "android")?.count || 0,
-      ),
-      color: "#22c55e",
-    },
-    {
-      key: "other",
-      label: "אחר",
-      count: Number(
-        statsData?.osBreakdown?.find((x) => x.key === "other")?.count || 0,
-      ),
-      color: "#94a3b8",
-    },
-  ];
-  const countryItems = (statsData?.countryBreakdown || []).map((x, idx) => ({
-    ...x,
-    color: ["#0ea5e9", "#22c55e", "#eab308", "#f97316", "#a855f7", "#ef4444"][
-      idx % 6
-    ],
-  }));
+  const osItems = useMemo(() => {
+    const items = [
+      {
+        key: "ios",
+        label: "iPhone (iOS)",
+        count: Number(
+          statsData?.osBreakdown?.find((x) => x.key === "ios")?.count || 0,
+        ),
+      },
+      {
+        key: "android",
+        label: "Android",
+        count: Number(
+          statsData?.osBreakdown?.find((x) => x.key === "android")?.count || 0,
+        ),
+      },
+      {
+        key: "other",
+        label: "אחר",
+        count: Number(
+          statsData?.osBreakdown?.find((x) => x.key === "other")?.count || 0,
+        ),
+      },
+    ];
+    return [...items].sort((a, b) => b.count - a.count);
+  }, [statsData]);
+  const countryItems = statsData?.countryBreakdown || [];
   const dailySeries = Array.isArray(statsData?.dailySeries)
     ? statsData.dailySeries
     : [];
-  const maxDaily = Math.max(1, ...dailySeries.map((d) => Number(d.count || 0)));
+  const dailyCounts = dailySeries.map((d) => Number(d.count || 0));
+  const maxDailyCount =
+    dailyCounts.length > 0 ? Math.max(0, ...dailyCounts) : 0;
 
   const handleActiveChange = useCallback(
     async (e) => {
@@ -427,113 +483,290 @@ export default function SavedQrCard({
           onClick={() => setStatsModalOpen(false)}
         >
           <div
-            className="modal-dialog modal-dialog-centered"
+            className="modal-dialog modal-dialog-centered dashboard-qr-stats-dialog"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="modal-content border-0 shadow">
-              <div className="modal-header border-0">
-                <h2
-                  className="modal-title h5 fw-bold"
-                  id={`saved-qr-stats-modal-title-${row._id}`}
-                >
-                  סטטיסטיקות לקוד
-                </h2>
+            <div className="modal-content border-0 shadow dashboard-qr-stats-modal-content">
+              <div className="modal-header border-0 dashboard-float-modal-header dashboard-qr-stats-modal-header">
+                <div className="d-flex align-items-start gap-2 flex-grow-1 min-w-0 me-2">
+                  <FiBarChart2
+                    className="dashboard-qr-stats-header-icon flex-shrink-0"
+                    aria-hidden
+                  />
+                  <div className="min-w-0">
+                    <h2
+                      className="modal-title h5 fw-bold mb-0"
+                      id={`saved-qr-stats-modal-title-${row._id}`}
+                    >
+                      סטטיסטיקות לקוד
+                    </h2>
+                    <p
+                      className="dashboard-qr-stats-subtitle text-truncate mb-0"
+                      title={cardTitle(row)}
+                    >
+                      {cardTitle(row)}
+                    </p>
+                  </div>
+                </div>
                 <button
                   type="button"
-                  className="btn-close"
+                  className="btn-close flex-shrink-0"
                   aria-label="סגירה"
                   onClick={() => setStatsModalOpen(false)}
                 />
               </div>
-              <div className="modal-body pt-0">
+              <div className="modal-body pt-0 dashboard-qr-stats-modal-body">
                 {statsLoading ? (
-                  <div className="text-center py-4">
-                    <span className="spinner-border spinner-border-sm text-secondary" role="status" />
+                  <div className="dashboard-qr-stats-loading text-center py-5">
+                    <span
+                      className="spinner-border spinner-border-sm text-secondary"
+                      role="status"
+                    />
+                    <p className="small text-muted mb-0 mt-3">טוען נתונים…</p>
                   </div>
                 ) : statsError ? (
-                  <p className="small text-danger mb-0">{statsError}</p>
+                  <div
+                    className="alert alert-danger small mb-0 dashboard-qr-stats-alert"
+                    role="alert"
+                  >
+                    {statsError}
+                  </div>
                 ) : (
                   <>
-                    <div className="dashboard-qr-stats-counter mb-3">
-                      <span>פתחו את הקוד</span>
-                      <strong>{totalScans}</strong>
-                      <span>פעמים</span>
+                    <div className="dashboard-qr-stats-hero">
+                      <div className="dashboard-qr-stats-hero-row">
+                        <span className="dashboard-qr-stats-hero-label-inline">
+                          סה״כ סרקו את האתר שלך:
+                        </span>
+                        <strong
+                          className="dashboard-qr-stats-hero-value"
+                          dir="ltr"
+                        >
+                          {totalScans.toLocaleString("he-IL")}
+                        </strong>
+                        <span className="dashboard-qr-stats-hero-unit">
+                          פעמים
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="dashboard-qr-stats-grid">
-                      <div className="dashboard-qr-stat-item dashboard-qr-stat-item--pie">
-                        <span className="dashboard-qr-stat-label mb-2">iOS / Android</span>
-                        <div className="dashboard-qr-pie-wrap">
-                          <div
-                            className="dashboard-qr-pie"
-                            style={pieStyleFromBreakdown(osItems)}
-                          />
-                          <div className="dashboard-qr-pie-legend">
-                            {osItems.map((it) => (
-                              <div key={it.key} className="dashboard-qr-legend-row">
-                                <span
-                                  className="dashboard-qr-legend-dot"
-                                  style={{ background: it.color }}
-                                />
-                                <span>{it.label}</span>
-                                <strong>{percentOf(it.count, totalScans)}%</strong>
-                              </div>
-                            ))}
+                    {totalScans === 0 ? (
+                      <p className="dashboard-qr-stats-hint small mb-0">
+                        אין עדיין סריקות. אחרי שמישהו יסרוק את הקוד יופיעו כאן
+                        פילוח מערכות הפעלה, מדינות וגרף לפי ימים.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="dashboard-qr-stats-stack">
+                          <div className="dashboard-qr-stat-item dashboard-qr-stat-item--rows">
+                            <span className="dashboard-qr-stat-label dashboard-qr-stat-label--section">
+                              סריקות לפי מערכת הפעלה
+                            </span>
+                            <div
+                              className="dashboard-qr-stat-hbar-list dashboard-qr-stat-hbar-list--fill"
+                              dir="ltr"
+                            >
+                              {osItems.map((it) => {
+                                const pct = percentOf(it.count, totalScans);
+                                return (
+                                  <div
+                                    key={it.key}
+                                    className="dashboard-qr-stat-hbar-row"
+                                  >
+                                    <OsStatsIcon osKey={it.key} />
+                                    <span
+                                      className="dashboard-qr-stat-hbar-name text-truncate"
+                                      title={it.label}
+                                    >
+                                      {it.label}
+                                    </span>
+                                    <div
+                                      className="dashboard-qr-stat-hbar-track"
+                                      role="presentation"
+                                    >
+                                      <div
+                                        className="dashboard-qr-stat-hbar-fill"
+                                        style={{
+                                          width: `${Math.max(pct, it.count > 0 ? 2 : 0)}%`,
+                                        }}
+                                      />
+                                    </div>
+                                    <span
+                                      className="dashboard-qr-stat-hbar-metric"
+                                      dir="ltr"
+                                    >
+                                      {it.count.toLocaleString("he-IL")} (
+                                      {pct}%)
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      </div>
 
-                      <div className="dashboard-qr-stat-item dashboard-qr-stat-item--pie">
-                        <span className="dashboard-qr-stat-label mb-2">מדינות מובילות</span>
-                        <div className="dashboard-qr-pie-wrap">
-                          <div
-                            className="dashboard-qr-pie"
-                            style={pieStyleFromBreakdown(countryItems)}
-                          />
-                          <div className="dashboard-qr-pie-legend">
-                            {countryItems.length ? (
-                              countryItems.map((it) => (
-                                <div key={it.code} className="dashboard-qr-legend-row">
-                                  <span
-                                    className="dashboard-qr-legend-dot"
-                                    style={{ background: it.color }}
-                                  />
-                                  <span>{countryCodeToFlag(it.code)} {it.label}</span>
-                                  <strong>{percentOf(it.count, totalScans)}%</strong>
-                                </div>
-                              ))
+                          <div className="dashboard-qr-stat-item dashboard-qr-stat-item--rows">
+                            <span className="dashboard-qr-stat-label dashboard-qr-stat-label--section">
+                              סריקות לפי מדינות מובילות
+                            </span>
+                            {countryItems.length === 0 ? (
+                              <p className="dashboard-qr-stat-rows-empty mb-0">
+                                עדיין אין נתוני מדינה
+                              </p>
                             ) : (
-                              <span className="small text-muted">עדיין אין נתוני מדינה</span>
+                              <div
+                                className="dashboard-qr-stat-hbar-list dashboard-qr-stat-hbar-list--country"
+                                dir="ltr"
+                              >
+                                <div
+                                  className="dashboard-qr-stat-hbar-thead dashboard-qr-stat-hbar-thead--country"
+                                  aria-hidden
+                                >
+                                  <span className="dashboard-qr-stat-hbar-th-rank">
+                                    #
+                                  </span>
+                                  <span className="dashboard-qr-stat-hbar-th-country">
+                                    מדינה
+                                  </span>
+                                  <span className="dashboard-qr-stat-hbar-th-flag" />
+                                  <span className="dashboard-qr-stat-hbar-th-bar" />
+                                  <span className="dashboard-qr-stat-hbar-th-metric">
+                                    סריקות (%)
+                                  </span>
+                                </div>
+                                <div className="dashboard-qr-stat-country-rows-scroll">
+                                  {countryItems.map((it, idx) => {
+                                    const pct = percentOf(
+                                      it.count,
+                                      totalScans,
+                                    );
+                                    const countryName =
+                                      statsCountryDisplayName(it);
+                                    const flagSrc = countryFlagImgSrc(it.code);
+                                    return (
+                                      <div
+                                        key={`${it.code}-${idx}`}
+                                        className="dashboard-qr-stat-hbar-row dashboard-qr-stat-hbar-row--country"
+                                      >
+                                        <span className="dashboard-qr-stat-hbar-rank">
+                                          {idx + 1}
+                                        </span>
+                                        <span
+                                          className="dashboard-qr-stat-hbar-country-name-cell text-truncate"
+                                          dir="rtl"
+                                          title={countryName}
+                                        >
+                                          <strong className="dashboard-qr-stat-hbar-country-name">
+                                            {countryName}
+                                          </strong>
+                                        </span>
+                                        <span className="dashboard-qr-stat-hbar-flag-cell">
+                                          {flagSrc ? (
+                                            <img
+                                              src={flagSrc}
+                                              alt=""
+                                              width={24}
+                                              height={18}
+                                              className="dashboard-qr-stat-country-flag-img"
+                                              loading="lazy"
+                                              decoding="async"
+                                            />
+                                          ) : (
+                                            <span
+                                              className="dashboard-qr-stat-country-flag-fallback"
+                                              aria-hidden
+                                            >
+                                              🌍
+                                            </span>
+                                          )}
+                                        </span>
+                                        <div
+                                          className="dashboard-qr-stat-hbar-track"
+                                          role="presentation"
+                                        >
+                                          <div
+                                            className="dashboard-qr-stat-hbar-fill"
+                                            style={{
+                                              width: `${Math.max(pct, it.count > 0 ? 2 : 0)}%`,
+                                            }}
+                                          />
+                                        </div>
+                                        <span
+                                          className="dashboard-qr-stat-hbar-metric"
+                                          dir="ltr"
+                                        >
+                                          {Number(it.count).toLocaleString(
+                                            "he-IL",
+                                          )}{" "}
+                                          ({pct}%)
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
                             )}
                           </div>
                         </div>
-                      </div>
-                    </div>
 
-                    <div className="dashboard-qr-stat-item mt-3">
-                      <span className="dashboard-qr-stat-label mb-2">צפיות יומיות (30 יום)</span>
-                      <div className="dashboard-qr-bars">
-                        {dailySeries.map((d) => (
-                          <div key={d.date} className="dashboard-qr-bar-col">
-                            <div
-                              className="dashboard-qr-bar"
-                              style={{ height: `${Math.max(6, (Number(d.count || 0) / maxDaily) * 64)}px` }}
-                              title={`${d.date}: ${d.count}`}
-                            />
+                        <div className="dashboard-qr-stat-item dashboard-qr-stat-item--chart">
+                          <div className="dashboard-qr-stat-chart-head">
+                            <span className="dashboard-qr-stat-label mb-0">
+                              צפיות לפי יום
+                            </span>
+                            <span className="dashboard-qr-stat-chart-caption">
+                              30 הימים האחרונים
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                      <div className="small text-muted mt-2">
-                        30 הימים האחרונים
-                      </div>
-                    </div>
+                          <div className="dashboard-qr-bars-panel" dir="ltr">
+                            <div className="dashboard-qr-bars-scroll">
+                              <div className="dashboard-qr-bars">
+                                {dailySeries.map((d) => {
+                                  const c = Number(d.count || 0);
+                                  const h =
+                                    maxDailyCount === 0
+                                      ? 3
+                                      : Math.max(
+                                          5,
+                                          (c / maxDailyCount) * 82,
+                                        );
+                                  const dayLabel = formatStatsDayNumeric(d.date);
+                                  return (
+                                    <div
+                                      key={d.date}
+                                      className="dashboard-qr-bar-col"
+                                    >
+                                      <div
+                                        className="dashboard-qr-bar-track"
+                                        title={`${dayLabel} (${d.date}): ${c}`}
+                                      >
+                                        <div
+                                          className="dashboard-qr-bar"
+                                          style={{ height: `${h}px` }}
+                                        />
+                                      </div>
+                                      <span
+                                        className="dashboard-qr-bar-label"
+                                        dir="ltr"
+                                        translate="no"
+                                      >
+                                        {dayLabel}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </>
                 )}
               </div>
-              <div className="modal-footer border-0">
+              <div className="modal-footer border-0 dashboard-qr-stats-modal-footer">
                 <button
                   type="button"
-                  className="btn btn-outline-secondary"
+                  className="btn btn-teal"
                   onClick={() => setStatsModalOpen(false)}
                 >
                   סגירה
@@ -572,24 +805,22 @@ export default function SavedQrCard({
             className="modal-dialog modal-dialog-centered dashboard-qr-zoom-dialog"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="modal-content border-0 shadow-lg">
-              <div className="modal-header border-0 py-2 px-3 align-items-center">
+            <div className="modal-content border-0 shadow-lg dashboard-qr-zoom-modal-shell rounded-4 overflow-hidden">
+              <div className="modal-header border-0 dashboard-float-modal-header dashboard-qr-zoom-modal-header py-3 px-3">
                 <h5
-                  className="modal-title fs-6 mb-0 text-truncate pe-2"
+                  className="modal-title fs-6 fw-semibold mb-0 text-truncate flex-grow-1 min-w-0"
                   id={`dashboard-qr-zoom-title-${row._id}`}
                 >
                   {cardTitle(row)}
                 </h5>
                 <button
                   type="button"
-                  className="btn btn-link text-secondary p-1 ms-auto flex-shrink-0"
+                  className="btn-close"
                   aria-label="סגור"
                   onClick={() => setQrZoomOpen(false)}
-                >
-                  <FiX size={22} aria-hidden />
-                </button>
+                />
               </div>
-              <div className="modal-body text-center pt-0 pb-4 px-3">
+              <div className="modal-body text-center pt-2 pb-4 px-3 dashboard-qr-zoom-modal-body">
                 <img
                   src={previewUrl}
                   alt=""
@@ -633,15 +864,93 @@ export default function SavedQrCard({
               </span>
             </div>
           )}
-          <button
-            type="button"
-            className="btn btn-outline-secondary btn-sm dashboard-qr-download w-100"
-            onClick={handleDownload}
-            disabled={!previewUrl}
+          <div
+            className="qr-download-split-wrap dashboard-qr-download-split position-relative w-100"
+            ref={downloadSplitRef}
           >
-            <FiDownload className="me-1" aria-hidden />
-            הורדה
-          </button>
+            <div className="qr-download-split dashboard-qr-download-split-inner">
+              <button
+                type="button"
+                className="qr-download-split-main btn btn-teal btn-sm"
+                onClick={() => handleDownload(downloadFormat)}
+                disabled={!previewUrl || previewLoading}
+                aria-label={`הורד כקובץ ${downloadFormatLabels[downloadFormat]}`}
+              >
+                <span className="dashboard-qr-download-main-inner">
+                  <FiDownload size={18} aria-hidden />
+                  <span>
+                    הורד {downloadFormatLabels[downloadFormat]}
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                className="qr-download-split-toggle btn btn-teal btn-sm"
+                onClick={() => setDownloadMenuOpen((o) => !o)}
+                disabled={!previewUrl || previewLoading}
+                aria-expanded={downloadMenuOpen}
+                aria-haspopup="menu"
+                aria-label="עוד פורמטים להורדה"
+              >
+                <FiChevronDown
+                  size={18}
+                  style={{
+                    transform: downloadMenuOpen ? "rotate(180deg)" : "none",
+                    transition: "transform 0.2s ease",
+                  }}
+                  aria-hidden
+                />
+              </button>
+            </div>
+            {downloadMenuOpen ? (
+              <div
+                className="qr-download-split-menu"
+                role="menu"
+                aria-label="בחירת פורמט להורדה"
+              >
+                <button
+                  type="button"
+                  className="qr-download-split-option"
+                  role="menuitem"
+                  onClick={() => {
+                    selectDownloadFormat("png");
+                  }}
+                >
+                  PNG
+                </button>
+                <button
+                  type="button"
+                  className="qr-download-split-option"
+                  role="menuitem"
+                  onClick={() => {
+                    selectDownloadFormat("svg");
+                  }}
+                >
+                  SVG
+                </button>
+                <button
+                  type="button"
+                  className="qr-download-split-option"
+                  role="menuitem"
+                  onClick={() => {
+                    selectDownloadFormat("jpg");
+                  }}
+                >
+                  JPG
+                </button>
+                <button
+                  type="button"
+                  className="qr-download-split-option"
+                  role="menuitem"
+                  onClick={() => {
+                    selectDownloadFormat("pdf");
+                  }}
+                >
+                  PDF
+                </button>
+              </div>
+            ) : null}
+          </div>
           {row.linkMode === "dynamic" ? (
             <button
               type="button"

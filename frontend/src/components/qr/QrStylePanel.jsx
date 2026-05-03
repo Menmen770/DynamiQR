@@ -4,7 +4,7 @@ import QrStyleStickerTab from "./QrStyleStickerTab";
 import QrStyleLogoTab from "./QrStyleLogoTab";
 
 /**
- * שלב 2: לשוניות עיצוב (צבע, צורה, לוגו, סטיקר) + סטטוס יצירה.
+ * שלב 2: לשוניות עיצוב (צבע, צורה, לוגו, סטיקר).
  */
 function QrStylePanel({
   activeTab,
@@ -41,7 +41,6 @@ function QrStylePanel({
   handleLogoDragOver,
   handleLogoDragLeave,
   handleLogoFileSelect,
-  loading,
 }) {
   const tabClass = (tabName) =>
     `nav-link ${activeTab === tabName ? "active" : ""}`;
@@ -164,13 +163,6 @@ function QrStylePanel({
             handleLogoDragLeave={handleLogoDragLeave}
             handleLogoFileSelect={handleLogoFileSelect}
           />
-        )}
-
-        {loading && (
-          <div className="alert alert-info d-flex align-items-center gap-2 mt-3">
-            <span className="spinner-border spinner-border-sm" />
-            מייצר...
-          </div>
         )}
           </div>
         </div>

@@ -142,16 +142,56 @@ const COUNTRY_LABELS = {
 
 function countryNameFromCode(codeRaw) {
   const code = String(codeRaw || "UN").toUpperCase();
-  return COUNTRY_LABELS[code] || code;
+  if (code === "UN") {
+    return COUNTRY_LABELS.UN;
+  }
+  const override = COUNTRY_LABELS[code];
+  if (override) {
+    return override;
+  }
+  try {
+    const he = new Intl.DisplayNames(["he"], { type: "region" });
+    const name = he.of(code);
+    if (name && name !== code) {
+      return name;
+    }
+  } catch (_) {
+    /* Node ללא ICU מלא — נופלים לקוד */
+  }
+  return code;
 }
 
-function toDayKey(dateLike) {
+/** יום לוח שנה בציר זמן (לסטטיסטיקות יומיות — ישראל) */
+const STATS_DAY_TZ = "Asia/Jerusalem";
+
+function statsDayKey(dateLike) {
   const d = new Date(dateLike);
   if (Number.isNaN(d.getTime())) return null;
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: STATS_DAY_TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(d);
+    const map = {};
+    for (const p of parts) {
+      if (p.type !== "literal") map[p.type] = p.value;
+    }
+    if (!map.year || !map.month || !map.day) return null;
+    return `${map.year}-${map.month}-${map.day}`;
+  } catch {
+    return null;
+  }
+}
+
+function addGregorianDays(y, m, d, delta) {
+  const dt = new Date(Date.UTC(y, m - 1, d + delta));
+  return {
+    y: dt.getUTCFullYear(),
+    mo: dt.getUTCMonth() + 1,
+    day: dt.getUTCDate(),
+  };
 }
 
 async function allocateUniqueSlug() {
@@ -414,12 +454,13 @@ router.get("/saved-qrs/:id/stats", requireAuth, async (req, res) => {
     const daily = new Map();
 
     const now = new Date();
+    const todayKey = statsDayKey(now);
     const last30Keys = [];
-    for (let i = 29; i >= 0; i -= 1) {
-      const d = new Date(now);
-      d.setUTCDate(now.getUTCDate() - i);
-      const key = toDayKey(d);
-      if (key) {
+    if (todayKey) {
+      const [y0, m0, d0] = todayKey.split("-").map((x) => parseInt(x, 10));
+      for (let i = 29; i >= 0; i -= 1) {
+        const { y, mo, day } = addGregorianDays(y0, m0, d0, -i);
+        const key = `${y}-${String(mo).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
         last30Keys.push(key);
         daily.set(key, 0);
       }
@@ -432,7 +473,7 @@ router.get("/saved-qrs/:id/stats", requireAuth, async (req, res) => {
       const cc = String(ev?.countryCode || "UN").toUpperCase();
       countryCounts.set(cc, (countryCounts.get(cc) || 0) + 1);
 
-      const dayKey = toDayKey(ev?.scannedAt);
+      const dayKey = statsDayKey(ev?.scannedAt);
       if (dayKey && daily.has(dayKey)) {
         daily.set(dayKey, (daily.get(dayKey) || 0) + 1);
       }

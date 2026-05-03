@@ -124,7 +124,22 @@ function MainNavbar() {
 
   return (
     <header className="navbar navbar-expand-lg bg-white border-bottom sticky-top shadow-sm">
-      <div className="container py-2">
+      <div className="container py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <button
+          className="navbar-brand d-flex align-items-center m-0"
+          type="button"
+          onClick={() => navigate("/")}
+          style={{
+            border: "none",
+            background: "none",
+            cursor: "pointer",
+            padding: 0,
+          }}
+          title="חזרה לעמוד הבית"
+        >
+          <img src={logo} alt="QR Master" className="brand-logo" />
+        </button>
+
         {checkingAuth ? null : isAuthenticated ? (
           <div className="navbar-user-area" ref={menuRef}>
             <button
@@ -202,21 +217,6 @@ function MainNavbar() {
             </Link>
           </div>
         )}
-
-        <button
-          className="navbar-brand d-flex align-items-center"
-          type="button"
-          onClick={() => navigate("/")}
-          style={{
-            border: "none",
-            background: "none",
-            cursor: "pointer",
-            padding: 0,
-          }}
-          title="חזרה לעמוד הבית"
-        >
-          <img src={logo} alt="QR Master" className="brand-logo" />
-        </button>
       </div>
     </header>
   );
