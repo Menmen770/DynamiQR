@@ -15,7 +15,6 @@ export function useQrGeneratorMobile() {
   const [fgColor, setFgColor] = useState("#000000");
   const [bgColor, setBgColor] = useState("#ffffff");
   const [bgColorMode, setBgColorMode] = useState("solid");
-  const [bgEffect, setBgEffect] = useState("none");
   const [dotsType, setDotsType] = useState("square");
   const [cornersType, setCornersType] = useState("square");
   const [stickerType, setStickerType] = useState("none");
@@ -46,8 +45,7 @@ export function useQrGeneratorMobile() {
 
     const bgForAPI =
       stickerType !== "none"
-        ? "transparent"
-        : bgColorMode === "effect" || bgColorMode === "none"
+        || bgColorMode === "none"
           ? "transparent"
           : bgColor;
 
@@ -122,7 +120,6 @@ export function useQrGeneratorMobile() {
     fgColor,
     bgColor,
     bgColorMode,
-    bgEffect,
     dotsType,
     cornersType,
     stickerType,
@@ -174,8 +171,6 @@ export function useQrGeneratorMobile() {
     setBgColor,
     bgColorMode,
     setBgColorMode,
-    bgEffect,
-    setBgEffect,
     dotsType,
     setDotsType,
     cornersType,

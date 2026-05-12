@@ -19,80 +19,6 @@ import { FaXTwitter } from "react-icons/fa6";
 
 import { STICKER_IMAGE_FRAMES } from "../assets/stickerAssets";
 
-/**
- * אפקטי רקע — שם לתצוגה + gradient/CSS ל־UI ול־canvas (מקור אמת יחיד).
- * הפורמט של gradient תואם ל־paintExportBackground (linear-gradient עם deg).
- */
-export const BG_EFFECTS = [
-  { id: "none", name: "ללא אפקט", gradient: "#ffffff" },
-  {
-    id: "sunset-silk",
-    name: "שקיעה רכה",
-    gradient: "linear-gradient(135deg, #ff512f 0%, #dd2476 100%)",
-  },
-  {
-    id: "warm-terracotta",
-    name: "טרה-קוטה",
-    gradient: "linear-gradient(135deg, #e5976e 0%, #7f4122 100%)",
-  },
-  {
-    id: "classic-peach",
-    name: "אפרסק קלאסי",
-    gradient: "linear-gradient(135deg, #ff9a8b 0%, #ff6a88 100%)",
-  },
-  {
-    id: "golden-hour",
-    name: "שעת זהב",
-    gradient: "linear-gradient(135deg, #f2994a 0%, #f2c94c 100%)",
-  },
-  {
-    id: "soft-rose",
-    name: "ורוד עדין",
-    gradient: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-  },
-  {
-    id: "desert-sand",
-    name: "דיונה רכה",
-    gradient: "linear-gradient(135deg, #fff9f3 0%, #e8d4c0 45%, #c4a574 100%)",
-  },
-  {
-    id: "ocean-breeze",
-    name: "בריזת ים",
-    gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-  },
-  {
-    id: "purple-dream",
-    name: "חלום סגול",
-    gradient: "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
-  },
-  {
-    id: "mint-fresh",
-    name: "מנטה",
-    gradient: "linear-gradient(135deg, #30cfd0 0%, #330867 100%)",
-  },
-  {
-    id: "coral-reef",
-    name: "אלמוג",
-    gradient: "linear-gradient(135deg, #ff9a56 0%, #ff6a95 100%)",
-  },
-  {
-    id: "lavender-mist",
-    name: "לבנדר",
-    gradient: "linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)",
-  },
-  {
-    id: "instagram-glow",
-    name: "סגנון אינסטגרם",
-    gradient:
-      "linear-gradient(135deg, #feda75 0%, #fa7e1e 25%, #d62976 50%, #962fbf 75%, #4f5bd5 100%)",
-  },
-];
-
-export function getEffectBackground(effectId) {
-  const row = BG_EFFECTS.find((e) => e.id === effectId);
-  return row?.gradient ?? "#ffffff";
-}
-
 export const PRESET_QR_COLORS = [
   { name: "שחור", hex: "#111111" },
   { name: "גרפיט", hex: "#1f2937" },
@@ -138,6 +64,13 @@ export const CORNER_SHAPES = [
   { id: "classy", name: "Classy" },
   { id: "classy-rounded", name: "Classy Rounded" },
   { id: "dots", name: "Dots" },
+];
+
+export const ERROR_CORRECTION_LEVELS = [
+  { id: "L", name: "L", description: "מהיר ודחוס יותר" },
+  { id: "M", name: "M", description: "איזון טוב" },
+  { id: "Q", name: "Q", description: "מומלץ עם לוגו" },
+  { id: "H", name: "H", description: "עמידות מקסימלית" },
 ];
 
 export const STICKER_OPTIONS = [

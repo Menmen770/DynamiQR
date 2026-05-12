@@ -9,22 +9,28 @@ import QrStyleLogoTab from "./QrStyleLogoTab";
 function QrStylePanel({
   activeTab,
   setActiveTab,
+  qrColorMode,
+  setQrColorMode,
   fgColor,
   setFgColor,
+  dotsGradient,
+  setDotsGradient,
   bgColor,
   setBgColor,
   bgColorMode,
   setBgColorMode,
-  bgEffect,
-  setBgEffect,
+  bgGradient,
+  setBgGradient,
   qrPresetColors,
   bgPresetColors,
-  bgEffects,
-  getEffectBackground,
+  qrGradientPresets,
+  bgGradientPresets,
   dotsType,
   setDotsType,
   cornersType,
   setCornersType,
+  errorCorrectionLevel,
+  setErrorCorrectionLevel,
   stickerOptions,
   stickerType,
   setStickerType,
@@ -32,6 +38,8 @@ function QrStylePanel({
   setLogoInputMode,
   logoShape,
   setLogoShape,
+  logoInsetScale,
+  setLogoInsetScale,
   logoUrl,
   setLogoUrl,
   logoFile,
@@ -115,18 +123,22 @@ function QrStylePanel({
           <div className="qr-style-panel-body flex-grow-1 min-w-0">
         {activeTab === "color" && (
           <QrStyleColorTab
+            qrColorMode={qrColorMode}
+            setQrColorMode={setQrColorMode}
             fgColor={fgColor}
             setFgColor={setFgColor}
+            dotsGradient={dotsGradient}
+            setDotsGradient={setDotsGradient}
             bgColor={bgColor}
             setBgColor={setBgColor}
             bgColorMode={bgColorMode}
             setBgColorMode={setBgColorMode}
-            bgEffect={bgEffect}
-            setBgEffect={setBgEffect}
+            bgGradient={bgGradient}
+            setBgGradient={setBgGradient}
             qrPresetColors={qrPresetColors}
             bgPresetColors={bgPresetColors}
-            bgEffects={bgEffects}
-            getEffectBackground={getEffectBackground}
+            qrGradientPresets={qrGradientPresets}
+            bgGradientPresets={bgGradientPresets}
           />
         )}
 
@@ -136,6 +148,8 @@ function QrStylePanel({
             setDotsType={setDotsType}
             cornersType={cornersType}
             setCornersType={setCornersType}
+            errorCorrectionLevel={errorCorrectionLevel}
+            setErrorCorrectionLevel={setErrorCorrectionLevel}
           />
         )}
 
@@ -153,6 +167,8 @@ function QrStylePanel({
             setLogoInputMode={setLogoInputMode}
             logoShape={logoShape}
             setLogoShape={setLogoShape}
+            logoInsetScale={logoInsetScale}
+            setLogoInsetScale={setLogoInsetScale}
             logoUrl={logoUrl}
             setLogoUrl={setLogoUrl}
             logoFile={logoFile}

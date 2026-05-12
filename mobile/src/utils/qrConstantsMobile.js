@@ -1,32 +1,3 @@
-/**
- * קבועי מחולל QR — מיושרים עם האתר (qrConstants), עם תוויות בעברית למובייל.
- */
-
-export const BG_EFFECT_GRADIENTS = [
-  { id: "none", name: "ללא אפקט", colors: ["#ffffff", "#f5f5f5"] },
-  { id: "sunset-silk", name: "שקיעה רכה", colors: ["#ff512f", "#dd2476"] },
-  { id: "warm-terracotta", name: "טרה-קוטה", colors: ["#e5976e", "#7f4122"] },
-  { id: "classic-peach", name: "אפרסק קלאסי", colors: ["#ff9a8b", "#ff6a88"] },
-  { id: "golden-hour", name: "שעת זהב", colors: ["#f2994a", "#f2c94c"] },
-  { id: "soft-rose", name: "ורוד עדין", colors: ["#f093fb", "#f5576c"] },
-  { id: "desert-sand", name: "דיונה רכה", colors: ["#fff9f3", "#c4a574"] },
-  { id: "ocean-breeze", name: "בריזת ים", colors: ["#667eea", "#764ba2"] },
-  { id: "purple-dream", name: "חלום סגול", colors: ["#a8edea", "#fed6e3"] },
-  { id: "mint-fresh", name: "מנטה", colors: ["#30cfd0", "#330867"] },
-  { id: "coral-reef", name: "אלמוג", colors: ["#ff9a56", "#ff6a95"] },
-  { id: "lavender-mist", name: "לבנדר", colors: ["#e0c3fc", "#8ec5fc"] },
-  {
-    id: "instagram-glow",
-    name: "סגנון אינסטגרם",
-    colors: ["#feda75", "#4f5bd5"],
-  },
-];
-
-export function getEffectGradientColors(effectId) {
-  const row = BG_EFFECT_GRADIENTS.find((e) => e.id === effectId);
-  return row?.colors ?? ["#ffffff", "#ffffff"];
-}
-
 export const PRESET_QR_COLORS = [
   { name: "שחור", hex: "#111111" },
   { name: "גרפיט", hex: "#1f2937" },

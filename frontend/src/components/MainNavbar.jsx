@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiBookOpen, FiGrid, FiLogOut, FiPlusCircle } from "react-icons/fi";
+import { FiLogOut } from "react-icons/fi";
 import logo from "../assets/logo-full.png";
 import { API_BASE } from "../config";
 import { clearAuthToken } from "../utils/authSession";
+
+const MAIN_NAV_LINKS = [
+  { to: "/", label: "הקודים שלי" },
+  { to: "/create", label: "מחולל QR" },
+  { to: "/learn-qr", label: "מה זה QR" },
+];
 
 const getGreetingByHour = () => {
   const hour = new Date().getHours();
@@ -97,8 +103,6 @@ function MainNavbar() {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, []);
 
-  const closeMenu = () => setIsMenuOpen(false);
-
   const handleLogout = async () => {
     try {
       await fetch(`${API_BASE}/api/auth/logout`, {
@@ -121,10 +125,13 @@ function MainNavbar() {
     ? firstName.trim().charAt(0).toUpperCase()
     : "U";
   const greeting = getGreetingByHour();
+  const showCenteredNav = !checkingAuth && isAuthenticated;
 
   return (
     <header className="navbar navbar-expand-lg bg-white border-bottom sticky-top shadow-sm">
-      <div className="container py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div
+        className={`container py-2 ${showCenteredNav ? "main-navbar-layout main-navbar-layout--auth" : "d-flex justify-content-between align-items-center flex-wrap gap-2"}`}
+      >
         <button
           className="navbar-brand d-flex align-items-center m-0"
           type="button"
@@ -139,6 +146,23 @@ function MainNavbar() {
         >
           <img src={logo} alt="QR Master" className="brand-logo" />
         </button>
+
+        {showCenteredNav && (
+          <nav className="main-navbar-center-nav" aria-label="ניווט ראשי">
+            {MAIN_NAV_LINKS.map((item) => {
+              const isActive = location.pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`main-navbar-center-link ${isActive ? "active" : ""}`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        )}
 
         {checkingAuth ? null : isAuthenticated ? (
           <div className="navbar-user-area" ref={menuRef}>
@@ -156,56 +180,21 @@ function MainNavbar() {
               </span>
             </button>
 
-            {isMenuOpen && (
-              <div className="navbar-user-menu card shadow-sm" dir="rtl">
-                <nav
-                  className="navbar-user-nav-stack"
-                  aria-label="ניווט מהיר"
-                >
-                  <Link
-                    to="/create"
-                    className="navbar-user-nav-link"
-                    onClick={closeMenu}
-                  >
-                    <span className="navbar-user-nav-icon" aria-hidden>
-                      <FiPlusCircle strokeWidth={2.25} />
-                    </span>
-                    מחולל QR
-                  </Link>
-                  <Link
-                    to="/"
-                    className="navbar-user-nav-link"
-                    onClick={closeMenu}
-                  >
-                    <span className="navbar-user-nav-icon" aria-hidden>
-                      <FiGrid strokeWidth={2.25} />
-                    </span>
-                    הקודים שלי
-                  </Link>
-                  <Link
-                    to="/learn-qr"
-                    className="navbar-user-nav-link"
-                    onClick={closeMenu}
-                  >
-                    <span className="navbar-user-nav-icon" aria-hidden>
-                      <FiBookOpen strokeWidth={2.25} />
-                    </span>
-                    מה זה QR
-                  </Link>
-                </nav>
-
-                <div className="navbar-menu-actions navbar-menu-actions--centered">
-                  <button
-                    type="button"
-                    className="btn btn-logout-clean btn-sm"
-                    onClick={handleLogout}
-                  >
-                    <FiLogOut className="me-1" aria-hidden />
-                    התנתקות
-                  </button>
-                </div>
-              </div>
-            )}
+            <div
+              className={`navbar-logout-flyout ${isMenuOpen ? "is-open" : ""}`}
+              dir="rtl"
+              aria-hidden={!isMenuOpen}
+            >
+              <button
+                type="button"
+                className="btn btn-logout-clean btn-sm navbar-logout-flyout-btn"
+                onClick={handleLogout}
+                tabIndex={isMenuOpen ? 0 : -1}
+              >
+                <FiLogOut className="me-1" aria-hidden />
+                התנתקות
+              </button>
+            </div>
           </div>
         ) : (
           <div className="d-flex gap-2">

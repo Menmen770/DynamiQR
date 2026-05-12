@@ -4,6 +4,56 @@ const {
 const nodeCanvas = require("canvas");
 const { JSDOM } = require("jsdom");
 
+function clamp01(value) {
+  const num = Number(value);
+  if (Number.isNaN(num)) return 0;
+  return Math.min(1, Math.max(0, num));
+}
+
+function hexToRgb(hex) {
+  const value = String(hex || "").trim();
+  const match = value.match(/^#([0-9a-f]{6})$/i);
+  if (!match) return null;
+  const raw = match[1];
+  return {
+    r: parseInt(raw.slice(0, 2), 16),
+    g: parseInt(raw.slice(2, 4), 16),
+    b: parseInt(raw.slice(4, 6), 16),
+  };
+}
+
+function rgbToHex({ r, g, b }) {
+  const toHex = (n) => Math.round(Math.min(255, Math.max(0, n)))
+    .toString(16)
+    .padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function mixHexColors(a, b, ratio = 0.5) {
+  const colorA = hexToRgb(a);
+  const colorB = hexToRgb(b);
+  if (!colorA || !colorB) return a || b || "#000000";
+  const t = clamp01(ratio);
+  return rgbToHex({
+    r: colorA.r + (colorB.r - colorA.r) * t,
+    g: colorA.g + (colorB.g - colorA.g) * t,
+    b: colorA.b + (colorB.b - colorA.b) * t,
+  });
+}
+
+function getGradientAnchorColor(dotsGradient, fallback = "#000000") {
+  const stops = Array.isArray(dotsGradient?.colorStops)
+    ? dotsGradient.colorStops.filter((stop) => stop && stop.color)
+    : [];
+  if (!stops.length) return fallback;
+  if (stops.length === 1) return stops[0].color || fallback;
+
+  const sorted = [...stops].sort((a, b) => clamp01(a.offset) - clamp01(b.offset));
+  const first = sorted[0]?.color || fallback;
+  const last = sorted[sorted.length - 1]?.color || fallback;
+  return mixHexColors(first, last, 0.45);
+}
+
 /** חור שקוף במרכז בלי תמונת לוגו — למי שרוצה למלא בעצמו */
 async function applyCutoutOnly(qrBuffer, logoShape = "square") {
   const qrImage = await nodeCanvas.loadImage(qrBuffer);
@@ -137,11 +187,19 @@ async function generateQrDataUrl(body) {
     throw err;
   }
 
+  const hasDotsGradient =
+    !!dotsGradient && typeof dotsGradient === "object";
+  const cornerColor = hasDotsGradient
+    ? getGradientAnchorColor(dotsGradient, color || "#000000")
+    : color || "#000000";
+
   const dotsOptions = {
-    color: color || "#000000",
     type: dotsType,
   };
-  if (dotsGradient) {
+  if (!hasDotsGradient) {
+    dotsOptions.color = color || "#000000";
+  }
+  if (hasDotsGradient) {
     dotsOptions.gradient = dotsGradient;
   }
 
@@ -168,12 +226,12 @@ async function generateQrDataUrl(body) {
     dotsOptions: dotsOptions,
     backgroundOptions: backgroundOptions,
     cornersSquareOptions: {
-      color: color || "#000000",
       type: cornersType,
+      color: cornerColor,
     },
     cornersDotOptions: {
-      color: color || "#000000",
       type: cornersType,
+      color: cornerColor,
     },
   };
 

@@ -2,6 +2,7 @@
  * Compose QR + tinted frame overlay (monochrome frame on transparent hole).
  */
 import { paintExportBackground } from "./qrExportBackground";
+import { createCanvasGradient } from "./qrGradients";
 
 /** QR drawn smaller inside the hole so the frame graphic reads larger (same overlay size). */
 export const STICKER_QR_INNER_SCALE = 0.78;
@@ -36,16 +37,16 @@ export function drawImageCover(ctx, img, dx, dy, dw, dh) {
  * @param {CanvasRenderingContext2D} ctx
  * @param {HTMLImageElement} qrImg
  * @param {HTMLImageElement} overlayImg
- * @param {string} fgColor - same as QR modules
+ * @param {{ color: string, gradient?: null|object }} ink - sticker tint that follows QR color/gradient
  * @param {{ x: number, y: number, width: number, height: number }} normRect - STICKER_QR_NORMALIZED_RECT
- * @param {null|{ bgColorMode: string, bgColor: string, bgEffect: string, getEffectBackground: (id: string) => string }} exportBgState — if set (download), paints chosen background; if null (preview), transparent outside frame
+ * @param {null|{ bgColorMode: string, bgColor: string, bgGradient?: object }} exportBgState — if set (download), paints chosen background; if null (preview), transparent outside frame
  */
 
 export function drawStickerImageComposite(
   ctx,
   qrImg,
   overlayImg,
-  fgColor,
+  ink,
   normRect,
   exportBgState = null,
 ) {
@@ -80,7 +81,10 @@ export function drawStickerImageComposite(
   tint.width = W;
   tint.height = H;
   const tctx = tint.getContext("2d");
-  tctx.fillStyle = fgColor;
+  const tintGradient = ink?.gradient
+    ? createCanvasGradient(tctx, W, H, ink.gradient)
+    : null;
+  tctx.fillStyle = tintGradient || ink?.color || "#000000";
   tctx.fillRect(0, 0, W, H);
   tctx.globalCompositeOperation = "destination-in";
   tctx.drawImage(overlayImg, 0, 0);

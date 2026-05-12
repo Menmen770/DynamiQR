@@ -10,6 +10,8 @@ function QrStyleLogoTab({
   setLogoInputMode,
   logoShape,
   setLogoShape,
+  logoInsetScale,
+  setLogoInsetScale,
   logoUrl,
   setLogoUrl,
   logoFile,
@@ -93,6 +95,34 @@ function QrStyleLogoTab({
               </button>
             </li>
           </ul>
+
+      {logoUrl && logoShape !== "overlay" && (
+        <div className="qr-logo-scale-card">
+          <div className="d-flex flex-column gap-1">
+            <div className="d-flex align-items-center justify-content-between gap-3">
+              <label className="form-label fw-semibold mb-0">
+                גודל הלוגו
+              </label>
+              <span className="small text-muted">
+                {Math.round((Number(logoInsetScale || 1) || 1) * 100)}%
+              </span>
+            </div>
+            <p className="small text-muted mb-0">
+              הקטן את הלוגו אם אתה רוצה לשמור על סריקה יציבה יותר.
+            </p>
+          </div>
+
+          <input
+            type="range"
+            min="0.55"
+            max="1"
+            step="0.05"
+            value={logoInsetScale}
+            onChange={(e) => setLogoInsetScale(Number(e.target.value))}
+            aria-label="גודל הלוגו"
+          />
+        </div>
+      )}
 
       {logoInputMode === "preset" ? (
         <div

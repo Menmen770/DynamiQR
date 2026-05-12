@@ -16,6 +16,20 @@ const MAX_LOGO_URL_LENGTH = 450_000;
 
 const MAX_DISPLAY_NAME = 120;
 
+function normalizeBgColorMode(mode) {
+  return mode === "none" || mode === "solid" || mode === "gradient"
+    ? mode
+    : "gradient";
+}
+
+function normalizeQrColorMode(mode) {
+  return mode === "gradient" ? "gradient" : "solid";
+}
+
+function normalizeErrorCorrectionLevel(level) {
+  return ["L", "M", "Q", "H"].includes(level) ? level : "Q";
+}
+
 function trimBodyForStorage(body) {
   const { qrType, qrValue, qrInputs, style, displayName } = body;
   if (!qrType || typeof qrType !== "string") {
@@ -39,14 +53,27 @@ function trimBodyForStorage(body) {
     linkMode,
     style: {
       fgColor: style?.fgColor ?? "#000000",
+      qrColorMode: normalizeQrColorMode(style?.qrColorMode),
+      dotsGradient:
+        style?.dotsGradient && typeof style.dotsGradient === "object"
+          ? style.dotsGradient
+          : null,
       bgColor: style?.bgColor ?? "#ffffff",
-      bgColorMode: style?.bgColorMode ?? "solid",
-      bgEffect: style?.bgEffect ?? "none",
+      bgColorMode: normalizeBgColorMode(style?.bgColorMode ?? "solid"),
+      bgGradient:
+        style?.bgGradient && typeof style.bgGradient === "object"
+          ? style.bgGradient
+          : null,
       dotsType: style?.dotsType ?? "square",
       cornersType: style?.cornersType ?? "square",
       logoUrl,
       logoShape: style?.logoShape ?? "square",
+      logoInsetScale:
+        typeof style?.logoInsetScale === "number" ? style.logoInsetScale : 1,
       stickerType: style?.stickerType ?? "none",
+      errorCorrectionLevel: normalizeErrorCorrectionLevel(
+        style?.errorCorrectionLevel,
+      ),
       pdfInputMode: style?.pdfInputMode ?? "file",
       logoInputMode: style?.logoInputMode ?? "file",
     },
@@ -83,14 +110,29 @@ function sanitizeStyleObject(stylePatch, previous = {}) {
   }
   return {
     fgColor: s.fgColor ?? p.fgColor ?? "#000000",
+    qrColorMode: normalizeQrColorMode(s.qrColorMode ?? p.qrColorMode),
+    dotsGradient:
+      s.dotsGradient && typeof s.dotsGradient === "object"
+        ? s.dotsGradient
+        : p.dotsGradient ?? null,
     bgColor: s.bgColor ?? p.bgColor ?? "#ffffff",
-    bgColorMode: s.bgColorMode ?? p.bgColorMode ?? "solid",
-    bgEffect: s.bgEffect ?? p.bgEffect ?? "none",
+    bgColorMode: normalizeBgColorMode(s.bgColorMode ?? p.bgColorMode ?? "solid"),
+    bgGradient:
+      s.bgGradient && typeof s.bgGradient === "object"
+        ? s.bgGradient
+        : p.bgGradient ?? null,
     dotsType: s.dotsType ?? p.dotsType ?? "square",
     cornersType: s.cornersType ?? p.cornersType ?? "square",
     logoUrl,
     logoShape: s.logoShape ?? p.logoShape ?? "square",
+    logoInsetScale:
+      typeof s.logoInsetScale === "number"
+        ? s.logoInsetScale
+        : p.logoInsetScale ?? 1,
     stickerType: s.stickerType ?? p.stickerType ?? "none",
+    errorCorrectionLevel: normalizeErrorCorrectionLevel(
+      s.errorCorrectionLevel ?? p.errorCorrectionLevel,
+    ),
     pdfInputMode: s.pdfInputMode ?? p.pdfInputMode ?? "file",
     logoInputMode: s.logoInputMode ?? p.logoInputMode ?? "file",
   };

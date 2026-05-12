@@ -1,129 +1,280 @@
 import { Link } from "react-router-dom";
-import QrTutorialTimeline from "../components/QrTutorialTimeline";
+import {
+  FiArrowLeft,
+  FiBarChart2,
+  FiCheckCircle,
+  FiFileText,
+  FiGlobe,
+  FiRefreshCw,
+  FiTrendingUp,
+  FiWifi,
+  FiZap,
+} from "react-icons/fi";
 
 function LearnQrPage() {
-  return (
-    <div className="container py-5" dir="rtl">
-      <main className="learn-article mx-auto">
-        <h1 className="learn-title mb-3">מה זה QR?</h1>
-        <p className="learn-lead mb-4">
-          QR הוא ברקוד חכם: סורקים במצלמה, ומיד מגיעים לתוכן בלי להקליד. זה
-          מהיר, נוח, ועובד מצוין לשיווק, שירות ומידע.
-        </p>
+  const useCases = [
+    {
+      title: "אתר או דף נחיתה",
+      text: "מעבירים לקוח מפלייר, אריזה או שלט ישירות לעמוד הנכון בלי להקליד כתובת.",
+      icon: FiGlobe,
+    },
+    {
+      title: "Wi-Fi לאורחים",
+      text: "סריקה אחת והמשתמש מתחבר לרשת בלי להסתבך עם סיסמה ארוכה.",
+      icon: FiWifi,
+    },
+    {
+      title: "תפריט, קטלוג או PDF",
+      text: "מציגים מידע מעודכן ונקי בלי להדפיס כל גרסה מחדש.",
+      icon: FiFileText,
+    },
+    {
+      title: "לידים, וואטסאפ ופניות",
+      text: "מקצרים את הדרך לפעולה ומגדילים את הסיכוי שהלקוח באמת ימשיך לשלב הבא.",
+      icon: FiTrendingUp,
+    },
+  ];
 
-        <section className="learn-quick-cards" aria-label="דוגמאות מהירות">
-          <article className="learn-quick-card">
-            <h3>אתר או דף נחיתה</h3>
-            <p>סריקה אחת ומגיעים ישירות לעמוד המבצע או לטופס לידים.</p>
+  const steps = [
+    {
+      num: "01",
+      title: "בוחרים יעד אחד ברור",
+      text: "אתר, PDF, איש קשר, WhatsApp או Wi-Fi. ככל שהמטרה ברורה יותר, גם הסריקה תעבוד טוב יותר.",
+    },
+    {
+      num: "02",
+      title: "מעצבים כך שיהיה קל לסרוק",
+      text: "שומרים על ניגודיות טובה, לוגו במידה נכונה ורמת תיקון שגיאות שמתאימה לשימוש בפועל.",
+    },
+    {
+      num: "03",
+      title: "שולחים לדפוס או לדיגיטל",
+      text: "מטמיעים על שלט, פלייר, אריזה, מסך או כרטיס ביקור ומוודאים שהמעבר מהיר ונוח בטלפון.",
+    },
+  ];
+
+  const benefits = [
+    "פחות חיכוך בין חשיפה לפעולה",
+    "מעבר מיידי מהעולם הפיזי לדיגיטלי",
+    "מתאים גם לשילוט, דפוס, אריזות ומסכים",
+    "בדינמי אפשר לעדכן יעד בלי להדפיס מחדש",
+    "אפשר למדוד סריקות וביצועים בקמפיינים",
+  ];
+
+  const tips = [
+    "אם התוכן קבוע ולא צפוי להשתנות, בדרך כלל סטטי מספיק.",
+    "אם יש קמפיינים, מבצעים או צורך במדידה, עדיף דינמי.",
+    "עדיף QR אחד עם מטרה אחת ברורה מאשר יותר מדי מידע בפעם אחת.",
+  ];
+
+  return (
+    <div className="container py-5 learn-page" dir="rtl">
+      <main className="learn-article learn-page-shell mx-auto">
+        <section className="learn-hero">
+          <div className="learn-hero-copy">
+            <span className="learn-eyebrow">מדריך קצר לעסקים ולמותגים</span>
+            <h1 className="learn-title mb-3">מה זה QR ואיך משתמשים בו נכון?</h1>
+            <p className="learn-lead mb-0">
+              QR הוא קיצור דרך חכם מהעולם הפיזי לדיגיטלי: סורקים עם מצלמה,
+              ומגיעים מיד לעמוד, קובץ, טופס, WhatsApp, איש קשר או Wi-Fi בלי
+              להקליד ובלי לאבד את המשתמש בדרך.
+            </p>
+
+            <div className="learn-hero-actions">
+              <Link
+                to="/create"
+                className="dashboard-create-layered text-decoration-none"
+              >
+                יצירת QR חדש
+              </Link>
+            </div>
+          </div>
+
+          <aside className="learn-hero-panel" aria-label="עיקרי הדברים">
+            <span className="learn-panel-kicker">בשורה התחתונה</span>
+            <h2>למה עסקים משתמשים ב־QR?</h2>
+
+            <ul className="learn-hero-point-list">
+              <li>
+                <span className="learn-hero-point-icon" aria-hidden>
+                  <FiZap />
+                </span>
+                מעבר מהיר יותר לפעולה בלי הקלדה ידנית
+              </li>
+              <li>
+                <span className="learn-hero-point-icon" aria-hidden>
+                  <FiRefreshCw />
+                </span>
+                ב־QR דינמי אפשר לעדכן יעד גם אחרי הדפסה
+              </li>
+              <li>
+                <span className="learn-hero-point-icon" aria-hidden>
+                  <FiBarChart2 />
+                </span>
+                אפשר למדוד סריקות ולהבין מה באמת עובד
+              </li>
+            </ul>
+
+            <div className="learn-hero-stat-grid">
+              <div className="learn-hero-stat">
+                <span className="learn-hero-stat-label">פחות חיכוך</span>
+                <strong>סריקה אחת</strong>
+                <p>ומעבר מיידי לתוכן</p>
+              </div>
+              <div className="learn-hero-stat">
+                <span className="learn-hero-stat-label">יותר גמישות</span>
+                <strong>דינמי</strong>
+                <p>כשרוצים לעדכן יעד</p>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section className="learn-block">
+          <div className="learn-block-head">
+            <span className="learn-section-kicker">שימושים נפוצים</span>
+            <h2>איפה QR באמת חוסך זמן</h2>
+            <p>
+              כשנותנים ללקוח מעבר ישיר לדבר הנכון, הסיכוי שהוא ימשיך לפעולה
+              גדל משמעותית.
+            </p>
+          </div>
+
+          <div className="learn-use-grid">
+            {useCases.map((item) => {
+              const Icon = item.icon;
+              return (
+                <article className="learn-use-card" key={item.title}>
+                  <span className="learn-card-icon" aria-hidden>
+                    <Icon />
+                  </span>
+                  <h3>{item.title}</h3>
+                  <p>{item.text}</p>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="learn-block">
+          <div className="learn-block-head">
+            <span className="learn-section-kicker">איך זה עובד</span>
+            <h2>שלושה שלבים פשוטים</h2>
+            <p>לא צריך לסבך את זה: בוחרים מטרה, מעצבים נכון, ומפרסמים.</p>
+          </div>
+
+          <div className="learn-steps-grid">
+            {steps.map((step) => (
+              <article className="learn-step-card" key={step.num}>
+                <span className="learn-step-number">{step.num}</span>
+                <div className="learn-step-copy">
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="learn-block">
+          <div className="learn-block-head">
+            <span className="learn-section-kicker">סטטי מול דינמי</span>
+            <h2>מה מתאים לך?</h2>
+            <p>
+              ההבדל פשוט: האם היעד נשאר קבוע, או שצריך גמישות ועדכון גם אחרי
+              שהקוד כבר יצא החוצה?
+            </p>
+          </div>
+
+          <div className="learn-compare-grid">
+            <article className="learn-compare-card learn-compare-card--static">
+              <span className="learn-compare-badge">QR סטטי</span>
+              <h3>מתאים לתוכן שלא משתנה</h3>
+              <p>
+                המידע מקודד בתוך הקוד עצמו, ולכן אחרי הדפסה אי אפשר להחליף יעד.
+              </p>
+              <ul className="learn-check-list">
+                <li>
+                  <FiCheckCircle aria-hidden />
+                  Wi-Fi קבוע, טלפון, אימייל או עמוד שלא משתנה
+                </li>
+                <li>
+                  <FiCheckCircle aria-hidden />
+                  פשוט ומהיר כשאין צורך בניהול שוטף
+                </li>
+              </ul>
+            </article>
+
+            <article className="learn-compare-card learn-compare-card--dynamic">
+              <span className="learn-compare-badge">QR דינמי</span>
+              <h3>מתאים לקמפיינים ותוכן חי</h3>
+              <p>
+                הקוד מפנה לכתובת ביניים, ולכן אפשר לעדכן יעד ולעקוב אחרי סריקות
+                גם אחרי שהקוד כבר הודפס.
+              </p>
+              <ul className="learn-check-list">
+                <li>
+                  <FiCheckCircle aria-hidden />
+                  מבצעים משתנים, דפי נחיתה וקמפיינים שיווקיים
+                </li>
+                <li>
+                  <FiCheckCircle aria-hidden />
+                  עדכון יעד ומדידת ביצועים בלי להדפיס מחדש
+                </li>
+              </ul>
+            </article>
+          </div>
+        </section>
+
+        <section className="learn-block learn-block--split">
+          <article className="learn-info-card">
+            <span className="learn-section-kicker">למה זה עובד טוב</span>
+            <h2>מה QR נותן לעסק?</h2>
+            <ul className="learn-check-list">
+              {benefits.map((item) => (
+                <li key={item}>
+                  <FiCheckCircle aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </article>
-          <article className="learn-quick-card">
-            <h3>Wi-Fi לאורחים</h3>
-            <p>התחברות לרשת בלי להקליד סיסמה - מעולה לבית עסק ואירועים.</p>
-          </article>
-          <article className="learn-quick-card">
-            <h3>תפריט / קובץ PDF</h3>
-            <p>מציגים תפריט, קטלוג או מחירון אונליין בצורה נקייה ומעודכנת.</p>
+
+          <article className="learn-info-card">
+            <span className="learn-section-kicker">בחירה חכמה</span>
+            <h2>איך לבחור נכון?</h2>
+            <ul className="learn-check-list">
+              {tips.map((item) => (
+                <li key={item}>
+                  <FiCheckCircle aria-hidden />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </article>
         </section>
 
-        <div className="learn-timeline-offset">
-          <QrTutorialTimeline />
-        </div>
-
-        <div className="learn-sections-grid">
-          <section className="learn-section learn-section--full">
-            <h2>סטטי מול דינמי - קצר וברור</h2>
-            <div className="learn-compare-grid">
-              <article className="learn-compare-card">
-                <h3>QR סטטי</h3>
-                <p>
-                  המידע מקודד בתוך הקוד עצמו. אחרי שהדפסתם - אי אפשר לשנות יעד.
-                </p>
-                <ul>
-                  <li>
-                    <strong>דוגמה:</strong> QR לרשת Wi-Fi קבועה של המשרד.
-                  </li>
-                  <li>
-                    <strong>מתי מתאים:</strong> תוכן קבוע שלא צפוי להשתנות.
-                  </li>
-                </ul>
-              </article>
-              <article className="learn-compare-card">
-                <h3>QR דינמי</h3>
-                <p>
-                  הקוד מפנה לכתובת ביניים, ואפשר להחליף את היעד גם אחרי הדפסה.
-                </p>
-                <ul>
-                  <li>
-                    <strong>דוגמה:</strong> QR לקמפיין שמחליף עמוד נחיתה כל חודש.
-                  </li>
-                  <li>
-                    <strong>בונוס:</strong> אפשר לעקוב אחרי סריקות ונתוני שימוש.
-                  </li>
-                </ul>
-              </article>
-            </div>
-          </section>
-
-          <section className="learn-section">
-            <h2>איך זה עובד בפועל?</h2>
+        <section className="learn-summary-card">
+          <div>
+            <span className="learn-section-kicker">לסיכום</span>
+            <h2>QR טוב הוא לא רק יפה. הוא גם ברור, מהיר וקל לסריקה.</h2>
             <p>
-              כבעל אתר, המטרה שלך פשוטה: להעביר את הלקוח מפלייר, שלט או אריזה
-              לעמוד הנכון אצלך תוך שנייה. הלקוח סורק את ה-QR במצלמה, והטלפון
-              פותח מיד את היעד שהגדרת - עמוד מוצר, טופס לידים, וואטסאפ, שמירת
-              איש קשר או התחברות ל-Wi-Fi.
+              כשמגדירים מטרה אחת ברורה, בוחרים בין סטטי לדינמי בצורה נכונה
+              ומשאירים מעבר פשוט למשתמש, ה־QR הופך מכלי טכני לכלי שיווקי אמיתי.
             </p>
-            <p>
-              במקום לבקש מהלקוח להקליד כתובת ארוכה (ולאבד אותו בדרך), אתה נותן
-              לו מעבר ישיר לפעולה שאתה רוצה שיבצע.
-            </p>
-          </section>
+          </div>
 
-          <section className="learn-section">
-            <h2>למה עסקים אוהבים QR?</h2>
-            <ul>
-              <li>מגדיל המרות - פחות שלבים בין חשיפה לפעולה</li>
-              <li>חוסך ללקוח הקלדה ידנית ומפחית נטישה</li>
-              <li>מחבר בין פרסום פיזי (שלט/פלייר/אריזה) לנכס הדיגיטלי שלך</li>
-              <li>מאפשר לעדכן יעדים ומבצעים בלי להדפיס מחדש (בקוד דינמי)</li>
-              <li>נותן מדידה אמיתית של סריקות וביצועים לקמפיינים</li>
-            </ul>
-          </section>
-
-          <section className="learn-section">
-            <h2>בחירה מהירה: מה מתאים לי?</h2>
-            <p>
-              אם המידע קבוע (למשל Wi-Fi קבוע או מספר טלפון) - לכו על סטטי. אם
-              צריך גמישות וניהול שוטף (למשל אתר משתנה, מבצעים, A/B) - עדיף
-              דינמי.
-            </p>
-          </section>
-
-          <section className="learn-section">
-            <h2>שימושים נפוצים</h2>
-            <ul>
-              <li>קישור לאתר, לדף מכירה או לטופס יצירת קשר</li>
-              <li>שיתוף תפריט, קטלוג או PDF</li>
-              <li>שמירת איש קשר בלחיצה אחת</li>
-              <li>פתיחת שיחת WhatsApp מוכנה מראש</li>
-              <li>חיבור מיידי לרשת Wi-Fi</li>
-            </ul>
-          </section>
-        </div>
-
-        <section className="learn-section mb-0">
-          <h2>לסיכום</h2>
-          <p>
-            QR טוב הוא קצר למשתמש וברור לעסק. בוחרים סוג נכון (סטטי/דינמי),
-            מנסחים מטרה אחת ברורה, ומרוויחים מעבר מהיר מהעולם הפיזי לדיגיטלי.
-          </p>
-          <div className="learn-cta-wrap mt-4">
+          <div className="learn-summary-actions">
             <Link
               to="/create"
               className="dashboard-create-layered text-decoration-none"
             >
-              יצירת QR חדש
+              להתחיל ליצור QR
             </Link>
+            <span className="learn-summary-link">
+              מעבר מהיר למחולל
+              <FiArrowLeft aria-hidden />
+            </span>
           </div>
         </section>
       </main>

@@ -1,14 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import { API_BASE } from "../config";
 import {
-  BG_EFFECTS,
+  ERROR_CORRECTION_LEVELS,
   PRESET_BG_COLORS,
   PRESET_QR_COLORS,
   STICKER_OPTIONS,
-  getEffectBackground,
 } from "../utils/qrConstants";
+import {
+  BG_GRADIENT_PRESETS,
+  DEFAULT_BG_GRADIENT,
+  DEFAULT_QR_GRADIENT,
+  QR_GRADIENT_PRESETS,
+} from "../utils/qrGradients";
 import { getSavedQrPreviewDataUrl } from "../utils/savedQrPreview";
 import { QrStylePanel } from "./qr";
+
+function normalizeBgColorMode(mode) {
+  return mode === "none" || mode === "solid" || mode === "gradient"
+    ? mode
+    : "gradient";
+}
 
 function buildDraftFromRow(row) {
   const st = row.style && typeof row.style === "object" ? { ...row.style } : {};
@@ -21,14 +32,21 @@ function buildDraftFromRow(row) {
         : {},
     style: {
       fgColor: st.fgColor ?? "#000000",
+      qrColorMode: st.qrColorMode ?? "solid",
+      dotsGradient: st.dotsGradient ?? DEFAULT_QR_GRADIENT,
       bgColor: st.bgColor ?? "#ffffff",
-      bgColorMode: st.bgColorMode ?? "solid",
-      bgEffect: st.bgEffect ?? "none",
+      bgColorMode: normalizeBgColorMode(st.bgColorMode ?? "solid"),
+      bgGradient: st.bgGradient ?? DEFAULT_BG_GRADIENT,
       dotsType: st.dotsType ?? "square",
       cornersType: st.cornersType ?? "square",
       logoUrl: typeof st.logoUrl === "string" ? st.logoUrl : "",
       logoShape: st.logoShape ?? "square",
+      logoInsetScale: Number(st.logoInsetScale) || 1,
       stickerType: st.stickerType ?? "none",
+      errorCorrectionLevel:
+        ERROR_CORRECTION_LEVELS.some((level) => level.id === st.errorCorrectionLevel)
+          ? st.errorCorrectionLevel
+          : "Q",
       pdfInputMode: st.pdfInputMode ?? "file",
       logoInputMode: st.logoInputMode ?? "preset",
     },
@@ -101,15 +119,19 @@ export default function SavedQrStyleEditModal({
   }, []);
 
   const setFgColor = (v) => patchStyle({ fgColor: v });
+  const setQrColorMode = (v) => patchStyle({ qrColorMode: v });
+  const setDotsGradient = (v) => patchStyle({ dotsGradient: v });
   const setBgColor = (v) => patchStyle({ bgColor: v });
   const setBgColorMode = (v) => patchStyle({ bgColorMode: v });
-  const setBgEffect = (v) => patchStyle({ bgEffect: v });
+  const setBgGradient = (v) => patchStyle({ bgGradient: v });
   const setDotsType = (v) => patchStyle({ dotsType: v });
   const setCornersType = (v) => patchStyle({ cornersType: v });
   const setStickerType = (v) => patchStyle({ stickerType: v });
   const setLogoInputMode = (v) => patchStyle({ logoInputMode: v });
   const setLogoShape = (v) => patchStyle({ logoShape: v });
+  const setLogoInsetScale = (v) => patchStyle({ logoInsetScale: v });
   const setLogoUrl = (v) => patchStyle({ logoUrl: v });
+  const setErrorCorrectionLevel = (v) => patchStyle({ errorCorrectionLevel: v });
 
   const handleLogoDrop = useCallback(
     (e) => {
@@ -251,22 +273,28 @@ export default function SavedQrStyleEditModal({
                 <QrStylePanel
                   activeTab={activeTab}
                   setActiveTab={setActiveTab}
+                  qrColorMode={s.qrColorMode}
+                  setQrColorMode={setQrColorMode}
                   fgColor={s.fgColor}
                   setFgColor={setFgColor}
+                  dotsGradient={s.dotsGradient}
+                  setDotsGradient={setDotsGradient}
                   bgColor={s.bgColor}
                   setBgColor={setBgColor}
                   bgColorMode={s.bgColorMode}
                   setBgColorMode={setBgColorMode}
-                  bgEffect={s.bgEffect}
-                  setBgEffect={setBgEffect}
+                  bgGradient={s.bgGradient}
+                  setBgGradient={setBgGradient}
                   qrPresetColors={PRESET_QR_COLORS}
                   bgPresetColors={PRESET_BG_COLORS}
-                  bgEffects={BG_EFFECTS}
-                  getEffectBackground={getEffectBackground}
+                  qrGradientPresets={QR_GRADIENT_PRESETS}
+                  bgGradientPresets={BG_GRADIENT_PRESETS}
                   dotsType={s.dotsType}
                   setDotsType={setDotsType}
                   cornersType={s.cornersType}
                   setCornersType={setCornersType}
+                  errorCorrectionLevel={s.errorCorrectionLevel}
+                  setErrorCorrectionLevel={setErrorCorrectionLevel}
                   stickerOptions={STICKER_OPTIONS}
                   stickerType={s.stickerType}
                   setStickerType={setStickerType}
@@ -274,6 +302,8 @@ export default function SavedQrStyleEditModal({
                   setLogoInputMode={setLogoInputMode}
                   logoShape={s.logoShape}
                   setLogoShape={setLogoShape}
+                  logoInsetScale={s.logoInsetScale}
+                  setLogoInsetScale={setLogoInsetScale}
                   logoUrl={s.logoUrl}
                   setLogoUrl={setLogoUrl}
                   logoFile={logoFile}

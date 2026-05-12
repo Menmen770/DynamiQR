@@ -10,22 +10,35 @@ import {
 } from "./presetBrandLogos";
 import { isSvgDataUrl, rasterizeSvgDataUrlToPng } from "./rasterizeSvgLogo";
 import { effectiveSavedQrEncodedText } from "./qrEncodedText";
-import { getEffectBackground } from "./qrConstants";
 import { paintExportBackground } from "./qrExportBackground";
+import {
+  DEFAULT_BG_GRADIENT,
+  DEFAULT_QR_GRADIENT,
+  getGradientPrimaryColor,
+} from "./qrGradients";
 
 const MAX_LOGO_FOR_PREVIEW = 400_000;
 
+function normalizeBgColorMode(mode) {
+  return mode === "none" || mode === "solid" || mode === "gradient"
+    ? mode
+    : "gradient";
+}
+
 function buildBgForApi(style) {
   const stickerType = style.stickerType || "none";
-  const bgColorMode = style.bgColorMode || "solid";
+  const bgColorMode = normalizeBgColorMode(style.bgColorMode || "solid");
   const bg = style.bgColor || "#ffffff";
   if (stickerType !== "none") return "transparent";
-  if (bgColorMode === "effect" || bgColorMode === "none") return "transparent";
+  if (
+    bgColorMode === "gradient" ||
+    bgColorMode === "none"
+  ) return "transparent";
   return bg;
 }
 
 /**
- * מצייר מאחורי ה-QR את אותו רקע כמו במחולל (צבע / אפקט / לבן כשהמצב "ללא רקע").
+ * מצייר מאחורי ה-QR את אותו רקע כמו במחולל (צבע / גרדיאנט / לבן כשהמצב "ללא רקע").
  */
 function compositeDataUrlOnSavedStyleBackground(qrDataUrl, style) {
   return new Promise((resolve) => {
@@ -43,7 +56,7 @@ function compositeDataUrlOnSavedStyleBackground(qrDataUrl, style) {
         canvas.width = w;
         canvas.height = h;
         const ctx = canvas.getContext("2d", { alpha: true });
-        const bgColorMode = style.bgColorMode || "solid";
+        const bgColorMode = normalizeBgColorMode(style.bgColorMode || "solid");
         if (bgColorMode === "none") {
           ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, w, h);
@@ -51,8 +64,7 @@ function compositeDataUrlOnSavedStyleBackground(qrDataUrl, style) {
           paintExportBackground(ctx, w, h, {
             bgColorMode,
             bgColor: style.bgColor || "#ffffff",
-            bgEffect: style.bgEffect || "none",
-            getEffectBackground,
+            bgGradient: style.bgGradient || DEFAULT_BG_GRADIENT,
           });
         }
         ctx.drawImage(img, 0, 0);
@@ -66,7 +78,7 @@ function compositeDataUrlOnSavedStyleBackground(qrDataUrl, style) {
   });
 }
 
-function compositeStickerPreview(qrDataUrl, stickerType, fgColor) {
+function compositeStickerPreview(qrDataUrl, stickerType, fgColor, qrGradient = null) {
   return new Promise((resolve) => {
     const overlayUrl = getStickerOverlayUrl(stickerType);
     if (!overlayUrl || !isImageStickerId(stickerType)) {
@@ -86,7 +98,10 @@ function compositeStickerPreview(qrDataUrl, stickerType, fgColor) {
           ctx,
           qrImg,
           overlayImg,
-          fgColor,
+          {
+            color: fgColor,
+            gradient: qrGradient,
+          },
           STICKER_QR_NORMALIZED_RECT,
         );
         resolve(canvas.toDataURL("image/png"));
@@ -118,10 +133,14 @@ export async function getSavedQrPreviewDataUrl(row, apiBase) {
   if (!text) return "";
 
   const fg = style.fgColor || "#000000";
+  const qrColorMode = style.qrColorMode || "solid";
+  const dotsGradient = style.dotsGradient || DEFAULT_QR_GRADIENT;
   const dotsType = style.dotsType || "square";
   const cornersType = style.cornersType || "square";
   const logoShape = style.logoShape || "square";
   const stickerType = style.stickerType || "none";
+  const errorCorrectionLevel = style.errorCorrectionLevel || "Q";
+  const logoInsetScale = Number(style.logoInsetScale) || 1;
 
   let logoUrl = typeof style.logoUrl === "string" ? style.logoUrl : "";
   if (logoUrl.length > MAX_LOGO_FOR_PREVIEW) {
@@ -140,13 +159,19 @@ export async function getSavedQrPreviewDataUrl(row, apiBase) {
 
   const body = {
     text,
-    color: fg,
+    color:
+      qrColorMode === "gradient"
+        ? getGradientPrimaryColor(dotsGradient, fg)
+        : fg,
     bgColor: buildBgForApi(style),
     dotsType,
     cornersType,
     logoShape,
+    errorCorrectionLevel,
   };
+  if (qrColorMode === "gradient") body.dotsGradient = dotsGradient;
   if (logoUrl) body.image = logoUrl;
+  if (logoUrl) body.logoInsetScale = logoInsetScale;
 
   const res = await fetch(`${apiBase}/api/generate-qr`, {
     method: "POST",
@@ -159,7 +184,12 @@ export async function getSavedQrPreviewDataUrl(row, apiBase) {
   if (!qrImage) return "";
 
   if (stickerType !== "none") {
-    qrImage = await compositeStickerPreview(qrImage, stickerType, fg);
+    qrImage = await compositeStickerPreview(
+      qrImage,
+      stickerType,
+      fg,
+      qrColorMode === "gradient" ? dotsGradient : null,
+    );
   }
 
   return compositeDataUrlOnSavedStyleBackground(qrImage, style);

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FiFileText, FiSave, FiChevronDown } from "react-icons/fi";
 import SimpleTextModal from "../SimpleTextModal";
+import { gradientToCss } from "../../utils/qrGradients";
 
 /**
  * שלב 3: תצוגה מקדימה והורדות.
@@ -15,10 +16,9 @@ function QrPreviewPanel({
   error,
   loading,
   bgColorMode,
-  bgEffect,
+  bgGradient,
   bgColor,
   stickerType,
-  getEffectBackground,
   downloadQR,
   saveQr,
   saveQrSaving,
@@ -101,8 +101,8 @@ function QrPreviewPanel({
               bgColorMode === "none" ? "transparent-bg" : ""
             } ${stickerType !== "none" ? "qr-preview--with-sticker" : ""}`}
             style={
-              bgColorMode === "effect" && bgEffect !== "none"
-                ? { background: getEffectBackground(bgEffect) }
+              bgColorMode === "gradient"
+                ? { background: gradientToCss(bgGradient) }
                 : bgColorMode === "none"
                   ? {}
                   : { background: bgColor }

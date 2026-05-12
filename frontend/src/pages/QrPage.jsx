@@ -2,14 +2,16 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useQrGenerator } from "../hooks";
 import {
-  BG_EFFECTS,
   PRESET_QR_COLORS,
   PRESET_BG_COLORS,
   STICKER_OPTIONS,
   QR_TYPES_MAIN,
   QR_TYPES_MORE,
-  getEffectBackground,
 } from "../utils/qrConstants";
+import {
+  BG_GRADIENT_PRESETS,
+  QR_GRADIENT_PRESETS,
+} from "../utils/qrGradients";
 import WhyUsSection from "../components/WhyUsSection";
 import PromotionalMaterialsSection from "../components/PromotionalMaterialsSection";
 import QrTutorialTimeline from "../components/QrTutorialTimeline";
@@ -32,14 +34,18 @@ function QrPage() {
     setBgColor,
     fgColor,
     setFgColor,
+    qrColorMode,
+    setQrColorMode,
+    dotsGradient,
+    setDotsGradient,
     qrImage,
     previewImage,
     loading,
     error,
     bgColorMode,
     setBgColorMode,
-    bgEffect,
-    setBgEffect,
+    bgGradient,
+    setBgGradient,
     pdfFile,
     setPdfFile,
     isDragging,
@@ -58,8 +64,12 @@ function QrPage() {
     setLogoInputMode,
     logoShape,
     setLogoShape,
+    logoInsetScale,
+    setLogoInsetScale,
     stickerType,
     setStickerType,
+    errorCorrectionLevel,
+    setErrorCorrectionLevel,
     qrInputs,
     handleQRTypeChange,
     handleInputChange,
@@ -143,22 +153,28 @@ function QrPage() {
             <QrStylePanel
               activeTab={activeTab}
               setActiveTab={setActiveTab}
+              qrColorMode={qrColorMode}
+              setQrColorMode={setQrColorMode}
               fgColor={fgColor}
               setFgColor={setFgColor}
+              dotsGradient={dotsGradient}
+              setDotsGradient={setDotsGradient}
               bgColor={bgColor}
               setBgColor={setBgColor}
               bgColorMode={bgColorMode}
               setBgColorMode={setBgColorMode}
-              bgEffect={bgEffect}
-              setBgEffect={setBgEffect}
+              bgGradient={bgGradient}
+              setBgGradient={setBgGradient}
               qrPresetColors={PRESET_QR_COLORS}
               bgPresetColors={PRESET_BG_COLORS}
-              bgEffects={BG_EFFECTS}
-              getEffectBackground={getEffectBackground}
+              qrGradientPresets={QR_GRADIENT_PRESETS}
+              bgGradientPresets={BG_GRADIENT_PRESETS}
               dotsType={dotsType}
               setDotsType={setDotsType}
               cornersType={cornersType}
               setCornersType={setCornersType}
+              errorCorrectionLevel={errorCorrectionLevel}
+              setErrorCorrectionLevel={setErrorCorrectionLevel}
               stickerOptions={STICKER_OPTIONS}
               stickerType={stickerType}
               setStickerType={setStickerType}
@@ -166,6 +182,8 @@ function QrPage() {
               setLogoInputMode={setLogoInputMode}
               logoShape={logoShape}
               setLogoShape={setLogoShape}
+              logoInsetScale={logoInsetScale}
+              setLogoInsetScale={setLogoInsetScale}
               logoUrl={logoUrl}
               setLogoUrl={setLogoUrl}
               logoFile={logoFile}
@@ -188,10 +206,9 @@ function QrPage() {
             error={error}
             loading={loading}
             bgColorMode={bgColorMode}
-            bgEffect={bgEffect}
+            bgGradient={bgGradient}
             bgColor={bgColor}
             stickerType={stickerType}
-            getEffectBackground={getEffectBackground}
             downloadQR={downloadQR}
             saveQr={saveQr}
             saveQrSaving={saveQrSaving}

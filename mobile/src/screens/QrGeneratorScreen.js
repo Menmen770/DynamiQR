@@ -10,7 +10,6 @@ import {
   View,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
-import { LinearGradient } from "expo-linear-gradient";
 import { useQrGeneratorMobile } from "../hooks/useQrGeneratorMobile";
 import { useAccessibility } from "../context/AccessibilityContext";
 import AuthFooter from "../components/AuthFooter";
@@ -19,7 +18,6 @@ import ScreenWithAccessibility from "../components/ScreenWithAccessibility";
 import QrPreviewComposite from "../components/QrPreviewComposite";
 import SvgThumbButton from "../components/SvgThumbButton";
 import {
-  BG_EFFECT_GRADIENTS,
   BODY_SHAPES,
   CORNER_SHAPES,
   PRESET_BG_COLORS,
@@ -57,8 +55,6 @@ export default function QrGeneratorScreen() {
     setBgColor,
     bgColorMode,
     setBgColorMode,
-    bgEffect,
-    setBgEffect,
     dotsType,
     setDotsType,
     cornersType,
@@ -212,7 +208,6 @@ export default function QrGeneratorScreen() {
                   {[
                     { id: "none", label: "ללא" },
                     { id: "solid", label: "צבע אחיד" },
-                    { id: "effect", label: "אפקט" },
                   ].map((m) => (
                     <TouchableOpacity
                       key={m.id}
@@ -256,33 +251,6 @@ export default function QrGeneratorScreen() {
                   </>
                 )}
 
-                {bgColorMode === "effect" && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.paletteRow}
-                  >
-                    {BG_EFFECT_GRADIENTS.filter((e) => e.id !== "none").map(
-                      (ef) => (
-                        <TouchableOpacity
-                          key={ef.id}
-                          onPress={() => setBgEffect(ef.id)}
-                          style={[
-                            styles.effectDot,
-                            bgEffect === ef.id && styles.colorDotSelected,
-                          ]}
-                        >
-                          <LinearGradient
-                            colors={ef.colors}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.effectGradientFill}
-                          />
-                        </TouchableOpacity>
-                      ),
-                    )}
-                  </ScrollView>
-                )}
               </View>
             )}
 
@@ -475,7 +443,6 @@ export default function QrGeneratorScreen() {
               loading={loading}
               error={error}
               bgColorMode={bgColorMode}
-              bgEffect={bgEffect}
               bgSolidColor={bgColor}
               stickerType={stickerType}
             />
@@ -610,17 +577,6 @@ const createStyles = (colors) =>
     colorDotSelected: {
       borderWidth: 3,
       borderColor: colors.primary,
-    },
-    effectDot: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      overflow: "hidden",
-    },
-    effectGradientFill: {
-      width: "100%",
-      height: "100%",
-      borderRadius: 22,
     },
     bgModeRow: {
       flexDirection: "row-reverse",

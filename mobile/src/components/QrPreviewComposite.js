@@ -6,10 +6,8 @@ import {
   Text,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { SvgXml } from "react-native-svg";
 import {
-  getEffectGradientColors,
   STICKER_QR_INNER_SCALE,
   STICKER_QR_NORMALIZED_RECT,
 } from "../utils/qrConstantsMobile";
@@ -22,7 +20,6 @@ export default function QrPreviewComposite({
   loading,
   error,
   bgColorMode,
-  bgEffect,
   bgSolidColor,
   stickerType,
 }) {
@@ -63,19 +60,12 @@ export default function QrPreviewComposite({
   const bgLayer =
     bgColorMode === "none" ? (
       <View style={[styles.checker, StyleSheet.absoluteFill]} />
-    ) : bgColorMode === "solid" ? (
+    ) : (
       <View
         style={[
           StyleSheet.absoluteFill,
           { backgroundColor: bgSolidColor || "#ffffff" },
         ]}
-      />
-    ) : (
-      <LinearGradient
-        colors={getEffectGradientColors(bgEffect)}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
       />
     );
 

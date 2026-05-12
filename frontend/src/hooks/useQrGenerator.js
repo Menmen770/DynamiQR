@@ -7,7 +7,11 @@ import {
 } from "../assets/stickerAssets";
 import { drawStickerImageComposite } from "../utils/stickerCompose";
 import { paintExportBackground } from "../utils/qrExportBackground";
-import { getEffectBackground } from "../utils/qrConstants";
+import {
+  DEFAULT_BG_GRADIENT,
+  DEFAULT_QR_GRADIENT,
+  getGradientPrimaryColor,
+} from "../utils/qrGradients";
 import {
   getPresetRasterInsetForDataUrl,
   isPresetLogoDataUrl,
@@ -51,16 +55,24 @@ function mergeQrInputs(base, patch) {
   return out;
 }
 
+function normalizeBgColorMode(mode) {
+  return mode === "none" || mode === "solid" || mode === "gradient"
+    ? mode
+    : "gradient";
+}
+
 export function useQrGenerator() {
   const [qrType, setQrType] = useState("url");
   const [qrValue, setQrValue] = useState("https://example.com");
   const [bgColor, setBgColor] = useState("#ffffff");
   const [fgColor, setFgColor] = useState("#000000");
+  const [qrColorMode, setQrColorMode] = useState("solid");
+  const [dotsGradient, setDotsGradient] = useState(DEFAULT_QR_GRADIENT);
   const [qrImage, setQrImage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [bgColorMode, setBgColorMode] = useState("solid");
-  const [bgEffect, setBgEffect] = useState("none");
+  const [bgGradient, setBgGradient] = useState(DEFAULT_BG_GRADIENT);
   const [pdfFile, setPdfFile] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [pdfInputMode, setPdfInputMode] = useState("file");
@@ -71,7 +83,9 @@ export function useQrGenerator() {
   const [isLogoDragging, setIsLogoDragging] = useState(false);
   const [logoInputMode, setLogoInputMode] = useState("preset");
   const [logoShape, setLogoShape] = useState("overlay");
+  const [logoInsetScale, setLogoInsetScale] = useState(1);
   const [stickerType, setStickerType] = useState("none");
+  const [errorCorrectionLevel, setErrorCorrectionLevel] = useState("Q");
   const [previewWithSticker, setPreviewWithSticker] = useState("");
   const [saveQrSaving, setSaveQrSaving] = useState(false);
   const [saveQrMessage, setSaveQrMessage] = useState(null);
@@ -190,20 +204,30 @@ export function useQrGenerator() {
     try {
       /* With sticker, QR must be transparent so step-3 background shows through the hole */
       const bgForAPI =
-        stickerType !== "none"
+        stickerType !== "none" ||
+        bgColorMode === "gradient" ||
+        bgColorMode === "none"
           ? "transparent"
-          : bgColorMode === "effect" || bgColorMode === "none"
-            ? "transparent"
-            : bg;
+          : bg;
+
+      const qrInkColor =
+        qrColorMode === "gradient"
+          ? getGradientPrimaryColor(dotsGradient, fg)
+          : fg;
 
       const requestBody = {
         text,
-        color: fg,
+        color: qrInkColor,
         bgColor: bgForAPI,
         dotsType,
         cornersType,
         logoShape,
+        errorCorrectionLevel,
       };
+
+      if (qrColorMode === "gradient") {
+        requestBody.dotsGradient = dotsGradient;
+      }
 
       if (logoUrl) {
         let imageForApi = logoUrl;
@@ -220,6 +244,7 @@ export function useQrGenerator() {
           }
         }
         requestBody.image = imageForApi;
+        requestBody.logoInsetScale = logoInsetScale;
       }
 
       const response = await fetch(`${API_BASE}/api/generate-qr`, {
@@ -279,10 +304,12 @@ export function useQrGenerator() {
     };
   }, [
     qrTextForEncode,
+    qrColorMode,
     fgColor,
+    dotsGradient,
     bgColor,
     bgColorMode,
-    bgEffect,
+    bgGradient,
     qrType,
     pdfInputMode,
     qrInputs.pdf,
@@ -290,7 +317,9 @@ export function useQrGenerator() {
     cornersType,
     logoUrl,
     logoShape,
+    logoInsetScale,
     stickerType,
+    errorCorrectionLevel,
   ]);
 
   useEffect(() => {
@@ -315,7 +344,10 @@ export function useQrGenerator() {
         ctx,
         qrImg,
         overlayImg,
-        fgColor,
+        {
+          color: fgColor,
+          gradient: qrColorMode === "gradient" ? dotsGradient : null,
+        },
         STICKER_QR_NORMALIZED_RECT,
       );
       setPreviewWithSticker(canvas.toDataURL("image/png"));
@@ -332,7 +364,7 @@ export function useQrGenerator() {
     overlayImg.onerror = () => setPreviewWithSticker("");
     qrImg.src = qrImage;
     overlayImg.src = overlayUrl;
-  }, [qrImage, stickerType, fgColor]);
+  }, [qrImage, stickerType, fgColor, qrColorMode, dotsGradient]);
 
   useEffect(() => {
     if (!saveQrMessage) return;
@@ -353,15 +385,19 @@ export function useQrGenerator() {
       qrInputs,
       style: {
         fgColor,
+        qrColorMode,
+        dotsGradient,
         bgColor,
         bgColorMode,
-        bgEffect,
+        bgGradient,
         dotsType,
         cornersType,
         logoUrl:
           logoUrl && logoUrl.length > 400000 ? "" : logoUrl,
         logoShape,
+        logoInsetScale,
         stickerType,
+        errorCorrectionLevel,
         pdfInputMode,
         logoInputMode,
       },
@@ -372,14 +408,18 @@ export function useQrGenerator() {
     linkMode,
     qrInputs,
     fgColor,
+    qrColorMode,
+    dotsGradient,
     bgColor,
     bgColorMode,
-    bgEffect,
+    bgGradient,
     dotsType,
     cornersType,
     logoUrl,
     logoShape,
+    logoInsetScale,
     stickerType,
+    errorCorrectionLevel,
     pdfInputMode,
     logoInputMode,
   ]);
@@ -401,9 +441,11 @@ export function useQrGenerator() {
     });
     setQrValue(String(doc.qrValue ?? "").trim());
     setFgColor(st.fgColor ?? "#000000");
+    setQrColorMode(st.qrColorMode ?? "solid");
+    setDotsGradient(st.dotsGradient ?? DEFAULT_QR_GRADIENT);
     setBgColor(st.bgColor ?? "#ffffff");
-    setBgColorMode(st.bgColorMode ?? "solid");
-    setBgEffect(st.bgEffect ?? "none");
+    setBgColorMode(normalizeBgColorMode(st.bgColorMode ?? "solid"));
+    setBgGradient(st.bgGradient ?? DEFAULT_BG_GRADIENT);
     setDotsType(st.dotsType ?? "square");
     setCornersType(st.cornersType ?? "square");
     const loadedLogo =
@@ -412,7 +454,9 @@ export function useQrGenerator() {
         : "";
     setLogoUrl(loadedLogo);
     setLogoShape(st.logoShape ?? "overlay");
+    setLogoInsetScale(Number(st.logoInsetScale) || 1);
     setStickerType(st.stickerType ?? "none");
+    setErrorCorrectionLevel(st.errorCorrectionLevel ?? "Q");
     setPdfInputMode(st.pdfInputMode ?? "file");
     if (loadedLogo && isPresetLogoDataUrl(loadedLogo)) {
       setLogoInputMode("preset");
@@ -547,8 +591,7 @@ export function useQrGenerator() {
         const exportBgState = {
           bgColorMode,
           bgColor,
-          bgEffect,
-          getEffectBackground,
+          bgGradient,
         };
 
         const finalizeExport = () => {
@@ -612,7 +655,10 @@ export function useQrGenerator() {
               ctx,
               img,
               overlayImg,
-              fgColor,
+              {
+                color: fgColor,
+                gradient: qrColorMode === "gradient" ? dotsGradient : null,
+              },
               STICKER_QR_NORMALIZED_RECT,
               exportBgState,
             );
@@ -641,8 +687,10 @@ export function useQrGenerator() {
       stickerType,
       bgColorMode,
       bgColor,
-      bgEffect,
+      bgGradient,
       fgColor,
+      qrColorMode,
+      dotsGradient,
     ],
   );
 
@@ -655,14 +703,18 @@ export function useQrGenerator() {
     setBgColor,
     fgColor,
     setFgColor,
+    qrColorMode,
+    setQrColorMode,
+    dotsGradient,
+    setDotsGradient,
     qrImage,
     previewImage: stickerType !== "none" && previewWithSticker ? previewWithSticker : qrImage,
     loading,
     error,
     bgColorMode,
     setBgColorMode,
-    bgEffect,
-    setBgEffect,
+    bgGradient,
+    setBgGradient,
     pdfFile,
     setPdfFile,
     isDragging,
@@ -681,8 +733,12 @@ export function useQrGenerator() {
     setLogoInputMode,
     logoShape,
     setLogoShape,
+    logoInsetScale,
+    setLogoInsetScale,
     stickerType,
     setStickerType,
+    errorCorrectionLevel,
+    setErrorCorrectionLevel,
     qrInputs,
     handleQRTypeChange,
     handleInputChange,
