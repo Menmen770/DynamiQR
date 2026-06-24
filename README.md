@@ -20,12 +20,10 @@
 
 ### צילומי מסך
 
-> הוסיפו שני צילומי מסך לתיקייה `mobile/assets/images/screenshots/` בשמות `screenshot-1.png` ו-`screenshot-2.png` (מומלץ רוחב ~1080px).
-
 <p align="center">
-  <img src="mobile/assets/images/screenshots/screenshot-1.png" alt="דינמיקר — צילום מסך 1" width="300" />
+  <img src="mobile/assets/images/screenshots/screenshot-1.png" alt="דינמיקר — יצירת QR (תוכן ועיצוב)" width="300" />
   &nbsp;&nbsp;&nbsp;
-  <img src="mobile/assets/images/screenshots/screenshot-2.png" alt="דינמיקר — צילום מסך 2" width="300" />
+  <img src="mobile/assets/images/screenshots/screenshot-2.png" alt="דינמיקר — קודים שמורים וסטטיסטיקות" width="300" />
 </p>
 
 ### יכולות באפליקציה
