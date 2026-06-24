@@ -21,12 +21,7 @@
 ### צילומי מסך
 
 <p align="center">
-  <table cellpadding="0" cellspacing="0" align="center">
-    <tr>
-      <td><img src="mobile/assets/images/screenshots/screenshot-1.png" alt="דינמיקר — יצירת QR (תוכן ועיצוב)" width="240" /></td>
-      <td><img src="mobile/assets/images/screenshots/screenshot-2.png" alt="דינמיקר — קודים שמורים וסטטיסטיקות" width="240" /></td>
-    </tr>
-  </table>
+<img src="mobile/assets/images/screenshots/screenshot-1.png" alt="דינמיקר — יצירת QR" width="240"/><img src="mobile/assets/images/screenshots/screenshot-2.png" alt="דינמיקר — קודים שמורים" width="240"/>
 </p>
 
 ### יכולות באפליקציה
