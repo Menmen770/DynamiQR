@@ -24,7 +24,11 @@ import { useAuth } from "../context/AuthContext";
 import { useAccessibility } from "../context/AccessibilityContext";
 import { BRAND_LOGO } from "../constants/brand";
 import ThemeToggle from "./ThemeToggle";
-import { apiFetchWithTimeout, getApiBaseUrl, parseJsonResponse } from "../utils/api";
+import {
+  apiFetchWithTimeout,
+  getApiBaseUrl,
+  parseJsonResponse,
+} from "../utils/api";
 import { row, textStart } from "../utils/layout";
 
 const getGreetingByHour = () => {
@@ -104,7 +108,9 @@ export default function AppHeader() {
   };
 
   const firstName = getFirstName(user?.fullName) || "משתמש";
-  const userInitial = firstName ? firstName.trim().charAt(0).toUpperCase() : "מ";
+  const userInitial = firstName
+    ? firstName.trim().charAt(0).toUpperCase()
+    : "מ";
   const greeting = getGreetingByHour();
 
   const openStackScreen = (screen) => {
@@ -153,23 +159,48 @@ export default function AppHeader() {
         </View>
       </View>
 
-      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-          <Pressable style={styles.menuCard} onPress={(e) => e.stopPropagation()}>
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setMenuVisible(false)}
+        >
+          <Pressable
+            style={styles.menuCard}
+            onPress={(e) => e.stopPropagation()}
+          >
             <View style={styles.menuHeader}>
               <Text style={styles.menuTitle}>הגדרות</Text>
-              <TouchableOpacity onPress={() => setMenuVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <TouchableOpacity
+                onPress={() => setMenuVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
                 <IconX size={22} color={colors.subText} strokeWidth={2} />
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.menuScroll}>
               <View style={styles.menuSection}>
-                <TouchableOpacity style={styles.expandBtn} onPress={() => togglePanel("profile")}>
+                <TouchableOpacity
+                  style={styles.expandBtn}
+                  onPress={() => togglePanel("profile")}
+                >
                   <Text style={styles.expandBtnText}>עדכון שם</Text>
                   {expandedPanel === "profile" ? (
-                    <IconChevronUp size={18} color={colors.subText} strokeWidth={2} />
+                    <IconChevronUp
+                      size={18}
+                      color={colors.subText}
+                      strokeWidth={2}
+                    />
                   ) : (
-                    <IconChevronDown size={18} color={colors.subText} strokeWidth={2} />
+                    <IconChevronDown
+                      size={18}
+                      color={colors.subText}
+                      strokeWidth={2}
+                    />
                   )}
                 </TouchableOpacity>
                 {expandedPanel === "profile" && (
@@ -178,7 +209,9 @@ export default function AppHeader() {
                     <TextInput
                       style={styles.panelInput}
                       value={profileForm.firstName}
-                      onChangeText={(t) => setProfileForm((p) => ({ ...p, firstName: t }))}
+                      onChangeText={(t) =>
+                        setProfileForm((p) => ({ ...p, firstName: t }))
+                      }
                       placeholder="השם שלך"
                       placeholderTextColor={colors.subText}
                       textAlign="right"
@@ -191,7 +224,10 @@ export default function AppHeader() {
                       textAlign="right"
                     />
                     <TouchableOpacity
-                      style={[styles.saveBtn, profileSaving && styles.saveBtnDisabled]}
+                      style={[
+                        styles.saveBtn,
+                        profileSaving && styles.saveBtnDisabled,
+                      ]}
                       onPress={handleProfileSave}
                       disabled={profileSaving}
                     >
@@ -205,7 +241,9 @@ export default function AppHeader() {
                       <Text
                         style={[
                           styles.profileMsg,
-                          profileMessage.includes("נשמרו") ? styles.profileMsgSuccess : styles.profileMsgError,
+                          profileMessage.includes("נשמרו")
+                            ? styles.profileMsgSuccess
+                            : styles.profileMsgError,
                         ]}
                       >
                         {profileMessage}
@@ -226,7 +264,11 @@ export default function AppHeader() {
                   style={styles.menuLinkBtn}
                   onPress={() => openStackScreen("Privacy")}
                 >
-                  <IconShield size={18} color={colors.primary} strokeWidth={2} />
+                  <IconShield
+                    size={18}
+                    color={colors.primary}
+                    strokeWidth={2}
+                  />
                   <Text style={styles.menuLinkText}>פרטיות ותנאים</Text>
                 </TouchableOpacity>
               </View>
@@ -237,7 +279,10 @@ export default function AppHeader() {
                 </View>
               </View>
               <View style={styles.menuSection}>
-                <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+                <TouchableOpacity
+                  style={styles.logoutBtn}
+                  onPress={handleLogout}
+                >
                   <Text style={styles.logoutBtnText}>התנתקות</Text>
                 </TouchableOpacity>
               </View>
@@ -348,7 +393,12 @@ const createStyles = (colors) =>
       borderBottomWidth: StyleSheet.hairlineWidth,
       borderBottomColor: colors.border,
     },
-    menuTitle: { fontSize: 17, fontWeight: "800", color: colors.text, ...textStart },
+    menuTitle: {
+      fontSize: 17,
+      fontWeight: "800",
+      color: colors.text,
+      ...textStart,
+    },
     menuScroll: { maxHeight: 360 },
     menuSection: {
       padding: 14,
@@ -379,10 +429,26 @@ const createStyles = (colors) =>
       color: colors.text,
       ...textStart,
     },
-    expandBtn: { ...row, justifyContent: "space-between", alignItems: "center", paddingVertical: 12 },
-    expandBtnText: { fontSize: 15, fontWeight: "600", color: colors.text, ...textStart },
+    expandBtn: {
+      ...row,
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 12,
+    },
+    expandBtnText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+      ...textStart,
+    },
     panelContent: { marginTop: 4, paddingTop: 8 },
-    panelLabel: { fontSize: 12, fontWeight: "500", color: colors.subText, marginBottom: 4, ...textStart },
+    panelLabel: {
+      fontSize: 12,
+      fontWeight: "500",
+      color: colors.subText,
+      marginBottom: 4,
+      ...textStart,
+    },
     panelInput: {
       borderWidth: 1,
       borderColor: colors.border,
@@ -394,7 +460,10 @@ const createStyles = (colors) =>
       color: colors.text,
       fontSize: 15,
     },
-    panelInputDisabled: { backgroundColor: colors.toggleBg, color: colors.subText },
+    panelInputDisabled: {
+      backgroundColor: colors.toggleBg,
+      color: colors.subText,
+    },
     saveBtn: {
       backgroundColor: colors.primary,
       borderRadius: 999,
