@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { BRAND_NAME } from "../constants/brand";
 import {
   FiArrowLeft,
   FiBarChart2,
@@ -272,7 +273,7 @@ function LearnQrPage() {
               להתחיל ליצור QR
             </Link>
             <span className="learn-summary-link">
-              מעבר מהיר למחולל
+              מעבר מהיר ל{BRAND_NAME}
               <FiArrowLeft aria-hidden />
             </span>
           </div>

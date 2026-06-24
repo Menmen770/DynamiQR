@@ -781,7 +781,7 @@ export default function SavedQrCard({
         open={renameOpen}
         onClose={() => !renameBusy && setRenameOpen(false)}
         title="שינוי שם הקוד"
-        description="השם מופיע בדף «הקודים שלי» ובחיפוש."
+        description="השם מופיע בעמוד קודים שמורים ובחיפוש."
         label="שם לקוד"
         placeholder="למשל: קמפיין אביב"
         confirmLabel="שמור שם"

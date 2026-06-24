@@ -38,7 +38,7 @@ function buildBgForApi(style) {
 }
 
 /**
- * מצייר מאחורי ה-QR את אותו רקע כמו במחולל (צבע / גרדיאנט / לבן כשהמצב "ללא רקע").
+ * מצייר מאחורי ה-QR את אותו רקע כמו בדינמיקר (צבע / גרדיאנט / לבן כשהמצב "ללא רקע").
  */
 function compositeDataUrlOnSavedStyleBackground(qrDataUrl, style) {
   return new Promise((resolve) => {
@@ -219,7 +219,7 @@ export function downloadDataUrlPng(dataUrl, filename) {
 }
 
 /**
- * הורדת תצוגת QR שמורה (PNG data URL מהשרת/קומפוזיציה מקומית) כ־PNG / JPG / SVG / PDF — כמו במחולל.
+ * הורדת תצוגת QR שמורה (PNG data URL מהשרת/קומפוזיציה מקומית) כ־PNG / JPG / SVG / PDF — כמו בדינמיקר.
  */
 export function downloadSavedQrFromPreviewDataUrl(dataUrl, format, filenameBase) {
   if (!dataUrl || typeof dataUrl !== "string" || !dataUrl.startsWith("data:")) {

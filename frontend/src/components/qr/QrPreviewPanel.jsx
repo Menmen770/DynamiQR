@@ -80,7 +80,7 @@ function QrPreviewPanel({
         open={saveNameModalOpen}
         onClose={() => !saveNameBusy && setSaveNameModalOpen(false)}
         title="שמירה לאוסף"
-        description="בחר שם שיעזור לך למצוא את הקוד בדף «הקודים שלי»."
+        description="בחר שם שיעזור לך למצוא את הקוד בעמוד קודים שמורים."
         label="שם לקוד"
         placeholder="למשל: כרטיס ביקור, קמפיין אביב…"
         confirmLabel="שמור לאוסף"

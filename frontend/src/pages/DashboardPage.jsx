@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FiPlus, FiSearch } from "react-icons/fi";
 import { API_BASE } from "../config";
+import { BRAND_NAME } from "../constants/brand";
 import SavedQrCard from "../components/SavedQrCard";
 import DashboardAccountPanel from "../components/DashboardAccountPanel";
 import DashboardSidebar from "../components/DashboardSidebar";
@@ -332,7 +333,7 @@ function DashboardPage() {
           <>
             <h2 className="h5 fw-bold mb-2">עדיין אין קודים שמורים</h2>
             <p className="text-muted mb-4">
-              כשתשמור קוד מהמחולל, הוא יופיע כאן. תוכל לחזור אליו לעריכה בכל עת.
+              כשתשמור קוד מ{BRAND_NAME}, הוא יופיע כאן. תוכל לחזור אליו לעריכה בכל עת.
             </p>
             <Link to="/create" className="btn btn-teal">
               <FiPlus className="me-2" aria-hidden />
@@ -404,7 +405,7 @@ function DashboardPage() {
         <header className="dashboard-toolbar-strip mb-3 mb-md-4">
           <div className="dashboard-toolbar-hero">
             <div className="dashboard-toolbar-col dashboard-toolbar-col--title">
-              <h1 className="dashboard-title mb-1">הקודים שלי</h1>
+              <h1 className="dashboard-title mb-1">קודים שמורים</h1>
               <p className="dashboard-subtitle mb-0 mb-lg-0">
                 קודים שמורים — חיפוש, שמירה ועריכה.
               </p>

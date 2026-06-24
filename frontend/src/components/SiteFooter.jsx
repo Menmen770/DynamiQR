@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import {
+  BRAND_GENERATOR_NAV_HE,
+  BRAND_NAME,
+  BRAND_TAGLINE_HE,
+} from "../constants/brand";
 import { API_BASE } from "../config";
 
 function SiteFooter() {
@@ -47,11 +52,8 @@ function SiteFooter() {
       <div className="container py-4">
         <div className="row g-4 g-lg-5 justify-content-center footer-grid">
           <div className="col-12 col-md-4 footer-col">
-            <h6 className="footer-title">מחולל QR</h6>
-            <p className="footer-text mb-2">
-              מחולל QR מקצועי ליצירת קודים חכמים לאתרים, קבצים, אנשי קשר,
-              וואטסאפ ורשתות חברתיות.
-            </p>
+            <h6 className="footer-title">{BRAND_NAME}</h6>
+            <p className="footer-text mb-2">{BRAND_TAGLINE_HE}</p>
             <p className="footer-text mb-0">
               מהיר, מאובטח ונוח לשימוש — עם התאמה אישית מלאה והורדה מיידית.
             </p>
@@ -61,7 +63,7 @@ function SiteFooter() {
             <h6 className="footer-title">ניווט מהיר</h6>
             <ul className="footer-links list-unstyled mb-0">
               <li>
-                <Link to="/create">מחולל QR</Link>
+                <Link to="/create">{BRAND_GENERATOR_NAV_HE}</Link>
               </li>
               <li>
                 <Link to="/learn-qr">מה זה QR?</Link>

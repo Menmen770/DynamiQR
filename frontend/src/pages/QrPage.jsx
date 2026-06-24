@@ -12,6 +12,7 @@ import {
   BG_GRADIENT_PRESETS,
   QR_GRADIENT_PRESETS,
 } from "../utils/qrGradients";
+import { BRAND_HERO_HE } from "../constants/brand";
 import WhyUsSection from "../components/WhyUsSection";
 import PromotionalMaterialsSection from "../components/PromotionalMaterialsSection";
 import QrTutorialTimeline from "../components/QrTutorialTimeline";
@@ -106,7 +107,7 @@ function QrPage() {
     <div className="qr-page">
       <main className="container py-4">
         <section className="text-center mb-5">
-          <h1 className="display-5 fw-bold">מחולל QR בעיצוב אישי</h1>
+          <h1 className="display-5 fw-bold">{BRAND_HERO_HE}</h1>
           <p className="lead text-muted">
             ליצור, לעצב ולהוריד קודי QR בממשק מודרני, מהיר ובחינם.
           </p>

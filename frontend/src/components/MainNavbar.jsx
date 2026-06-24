@@ -2,12 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiLogOut } from "react-icons/fi";
 import logo from "../assets/logo-full.png";
+import {
+  BRAND_GENERATOR_NAV_HE,
+  BRAND_NAME,
+} from "../constants/brand";
 import { API_BASE } from "../config";
 import { clearAuthToken } from "../utils/authSession";
 
 const MAIN_NAV_LINKS = [
-  { to: "/", label: "הקודים שלי" },
-  { to: "/create", label: "מחולל QR" },
+  { to: "/", label: "קודים שמורים" },
+  { to: "/create", label: BRAND_GENERATOR_NAV_HE },
   { to: "/learn-qr", label: "מה זה QR" },
 ];
 
@@ -144,7 +148,7 @@ function MainNavbar() {
           }}
           title="חזרה לעמוד הבית"
         >
-          <img src={logo} alt="QR Master" className="brand-logo" />
+          <img src={logo} alt={BRAND_NAME} className="brand-logo" />
         </button>
 
         {showCenteredNav && (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { API_BASE } from "../config";
+import { BRAND_NAME } from "../constants/brand";
 import {
   ERROR_CORRECTION_LEVELS,
   PRESET_BG_COLORS,
@@ -242,7 +243,7 @@ export default function SavedQrStyleEditModal({
           </div>
           <div className="modal-body pt-0">
             <p className="text-muted small mb-3">
-              שינויים נשמרים על אותו קוד שמור. לשינוי היעד או הסוג השתמשו במחולל
+              שינויים נשמרים על אותו קוד שמור. לשינוי היעד או הסוג השתמשו ב{BRAND_NAME}{" "}
               (פתח).
             </p>
             <div className="row g-4 align-items-start">
