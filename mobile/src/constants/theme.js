@@ -4,7 +4,7 @@ export const colors = {
   text: "#1f2a33",
   subText: "#6b7280",
   border: "#d1d5db",
-  primary: "#14b8a6",
+  primary: "#0a9396",
   white: "#ffffff",
   error: "#b91c1c",
 };

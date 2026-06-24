@@ -66,10 +66,10 @@ export default function SvgThumbButton({
 
 const styles = StyleSheet.create({
   btn: {
-    borderRadius: 12,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.03)",
+    backgroundColor: "rgba(0,0,0,0.04)",
   },
   loader: {
     alignItems: "center",

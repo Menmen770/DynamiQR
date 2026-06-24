@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useState } from "react";
 import {
-  Alert,
-  Image,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -9,52 +8,56 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconDeviceFloppy,
+  IconShare2,
+} from "@tabler/icons-react-native";
+import { useRoute } from "@react-navigation/native";
 import { useQrGeneratorMobile } from "../hooks/useQrGeneratorMobile";
 import { useAccessibility } from "../context/AccessibilityContext";
-import AuthFooter from "../components/AuthFooter";
-import BackToTopButton, { SCROLL_THRESHOLD } from "../components/BackToTopButton";
 import ScreenWithAccessibility from "../components/ScreenWithAccessibility";
+import ScreenPageHeader from "../components/ScreenPageHeader";
 import QrPreviewComposite from "../components/QrPreviewComposite";
-import SvgThumbButton from "../components/SvgThumbButton";
-import {
-  BODY_SHAPES,
-  CORNER_SHAPES,
-  PRESET_BG_COLORS,
-  PRESET_QR_COLORS,
-} from "../utils/qrConstantsMobile";
-import {
-  BODY_SHAPE_MODULES,
-  CORNER_SHAPE_MODULES,
-} from "../utils/qrShapeAssetsMobile";
-import { STICKER_OPTIONS } from "../utils/stickerAssetsMobile";
-import { PRESET_BRAND_MODULES } from "../utils/presetLogosMobile";
+import QrTypeSelectorMobile from "../components/QrTypeSelectorMobile";
+import QrContentStepMobile from "../components/QrContentStepMobile";
+import QrStylePanelMobile from "../components/qr/QrStylePanelMobile";
 
-const TABS = [
-  { id: "color", label: "צבע" },
-  { id: "shape", label: "צורה" },
-  { id: "logo", label: "לוגו" },
-  { id: "sticker", label: "סטיקר" },
+const STEPS = [
+  { id: "content", label: "תוכן", step: "1" },
+  { id: "style", label: "עיצוב", step: "2" },
+  { id: "export", label: "הורדה", step: "3" },
 ];
 
 export default function QrGeneratorScreen() {
+  const route = useRoute();
   const { colors } = useAccessibility();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const scrollRef = useRef(null);
-  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [activeStep, setActiveStep] = useState("content");
   const [activeTab, setActiveTab] = useState("color");
   const [selectedPresetId, setSelectedPresetId] = useState(null);
+  const [saveName, setSaveName] = useState("");
+  const previewCaptureRef = useRef(null);
 
-  const qr = useQrGeneratorMobile();
+  const qr = useQrGeneratorMobile(route.params?.loadPayload, previewCaptureRef);
   const {
-    url,
-    setUrl,
+    qrType,
+    setQrType,
+    qrInputs,
+    handleInputChange,
     fgColor,
     setFgColor,
+    qrColorMode,
+    setQrColorMode,
+    dotsGradient,
+    setDotsGradient,
     bgColor,
     setBgColor,
     bgColorMode,
     setBgColorMode,
+    bgGradient,
+    setBgGradient,
     dotsType,
     setDotsType,
     cornersType,
@@ -71,386 +74,323 @@ export default function QrGeneratorScreen() {
     logoLoadingPreset,
     selectPresetLogo,
     clearLogo,
+    errorCorrectionLevel,
+    setErrorCorrectionLevel,
     qrImage,
     loading,
     error,
     setError,
+    saveQr,
+    saveQrSaving,
+    saveQrMessage,
+    exportQr,
+    exporting,
   } = qr;
 
-  const handleScroll = (e) => {
-    const y = e?.nativeEvent?.contentOffset?.y ?? 0;
-    setShowBackToTop(y > SCROLL_THRESHOLD);
+  const previewProps = {
+    colors,
+    qrImage,
+    loading,
+    error,
+    bgColorMode,
+    bgSolidColor: bgColor,
+    bgGradient,
+    stickerType,
+    fgColor,
+    qrColorMode,
+    dotsGradient,
   };
 
-  const pickLogoFromGallery = async () => {
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      Alert.alert("הרשאה נדרשת", "אפשר גישה לתמונות בהגדרות המכשיר.");
-      return;
-    }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.85,
-      base64: true,
-    });
-    if (res.canceled || !res.assets?.[0]) return;
-    setLogoInputMode("gallery");
-    const a = res.assets[0];
-    const mime = a.mimeType || "image/jpeg";
-    setLogoInsetScale(1);
-    setLogoUrl(`data:${mime};base64,${a.base64}`);
-    setSelectedPresetId(null);
-    setError("");
-  };
-
-  const handleClearLogo = () => {
-    setSelectedPresetId(null);
-    clearLogo();
+  const handleSave = async () => {
+    const ok = await saveQr(saveName);
+    if (ok) setSaveName("");
   };
 
   return (
     <ScreenWithAccessibility>
       <View style={styles.pageInner}>
         <ScrollView
-          ref={scrollRef}
-          onScroll={handleScroll}
-          onMomentumScrollEnd={handleScroll}
-          scrollEventThrottle={16}
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.hero}>
-            <Text style={styles.heroTitle}>מחולל QR בעיצוב אישי</Text>
-          </View>
+          <ScreenPageHeader
+            colors={colors}
+            title="יצירת QR"
+            subtitle="בחרו סוג, התאימו צבעים וגרדיאנטים, והורידו"
+          />
 
-          <View style={styles.card}>
-            <View style={styles.stepRow}>
-              <View style={styles.stepBadge}>
-                <Text style={styles.stepBadgeText}>1</Text>
-              </View>
-              <Text style={styles.stepTitle}>תוכן</Text>
-            </View>
-            <Text style={styles.label}>כתובת (URL)</Text>
-            <TextInput
-              value={url}
-              onChangeText={(t) => {
-                setUrl(t);
-                setError("");
-              }}
-              placeholder="https://example.com"
-              autoCapitalize="none"
-              keyboardType="url"
-              style={styles.input}
-              textAlign="right"
-            />
-          </View>
-
-          <View style={styles.card}>
-            <View style={styles.stepRow}>
-              <View style={styles.stepBadge}>
-                <Text style={styles.stepBadgeText}>2</Text>
-              </View>
-              <Text style={styles.stepTitle}>התאם את העיצוב</Text>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tabBar}
-            >
-              {TABS.map((t) => (
-                <TouchableOpacity
-                  key={t.id}
-                  onPress={() => setActiveTab(t.id)}
-                  style={[
-                    styles.tabPill,
-                    activeTab === t.id && styles.tabPillActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.tabPillText,
-                      activeTab === t.id && styles.tabPillTextActive,
-                    ]}
+          <View style={styles.stepIndicator}>
+            {STEPS.map((s, idx) => {
+              const active = activeStep === s.id;
+              const done = STEPS.findIndex((x) => x.id === activeStep) > idx;
+              return (
+                <React.Fragment key={s.id}>
+                  <TouchableOpacity
+                    style={styles.stepItem}
+                    onPress={() => setActiveStep(s.id)}
+                    activeOpacity={0.85}
                   >
-                    {t.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                    <View
+                      style={[
+                        styles.stepBadge,
+                        active && styles.stepBadgeActive,
+                        done && styles.stepBadgeDone,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.stepBadgeText,
+                          (active || done) && styles.stepBadgeTextActive,
+                        ]}
+                      >
+                        {s.step}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.stepLabel,
+                        active && styles.stepLabelActive,
+                      ]}
+                    >
+                      {s.label}
+                    </Text>
+                  </TouchableOpacity>
+                  {idx < STEPS.length - 1 ? (
+                    <View
+                      style={[styles.stepLine, done && styles.stepLineDone]}
+                    />
+                  ) : null}
+                </React.Fragment>
+              );
+            })}
+          </View>
 
-            {activeTab === "color" && (
-              <View style={styles.tabBody}>
-                <Text style={styles.sectionLabel}>צבע נקודות ה-QR</Text>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.paletteRow}
+          {activeStep === "content" ? (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.stepTag}>
+                  <Text style={styles.stepTagText}>1</Text>
+                </View>
+                <Text style={styles.cardTitle}>מה יופיע בקוד?</Text>
+              </View>
+
+              <QrTypeSelectorMobile
+                colors={colors}
+                qrType={qrType}
+                onSelectType={setQrType}
+              />
+
+              <View style={styles.contentBox}>
+                <QrContentStepMobile
+                  colors={colors}
+                  qrType={qrType}
+                  qrInputs={qrInputs}
+                  onInputChange={handleInputChange}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={() => setActiveStep("style")}
+              >
+                <View style={styles.btnRow}>
+                  <Text style={styles.primaryBtnText}>המשך לעיצוב</Text>
+                  <IconArrowLeft
+                    size={18}
+                    color={colors.white}
+                    strokeWidth={2.2}
+                  />
+                </View>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
+          {activeStep === "style" ? (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.stepTag}>
+                  <Text style={styles.stepTagText}>2</Text>
+                </View>
+                <Text style={styles.cardTitle}>התאימו את העיצוב</Text>
+              </View>
+
+              <View style={styles.previewInline}>
+                <QrPreviewComposite {...previewProps} previewSize={200} />
+              </View>
+
+              <QrStylePanelMobile
+                colors={colors}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                qrColorMode={qrColorMode}
+                setQrColorMode={setQrColorMode}
+                fgColor={fgColor}
+                setFgColor={setFgColor}
+                dotsGradient={dotsGradient}
+                setDotsGradient={setDotsGradient}
+                bgColor={bgColor}
+                setBgColor={setBgColor}
+                bgColorMode={bgColorMode}
+                setBgColorMode={setBgColorMode}
+                bgGradient={bgGradient}
+                setBgGradient={setBgGradient}
+                dotsType={dotsType}
+                setDotsType={setDotsType}
+                cornersType={cornersType}
+                setCornersType={setCornersType}
+                stickerType={stickerType}
+                setStickerType={setStickerType}
+                logoShape={logoShape}
+                setLogoShape={setLogoShape}
+                logoInputMode={logoInputMode}
+                setLogoInputMode={setLogoInputMode}
+                logoUrl={logoUrl}
+                setLogoUrl={setLogoUrl}
+                setLogoInsetScale={setLogoInsetScale}
+                logoLoadingPreset={logoLoadingPreset}
+                selectPresetLogo={selectPresetLogo}
+                clearLogo={clearLogo}
+                selectedPresetId={selectedPresetId}
+                setSelectedPresetId={setSelectedPresetId}
+                setError={setError}
+                errorCorrectionLevel={errorCorrectionLevel}
+                setErrorCorrectionLevel={setErrorCorrectionLevel}
+              />
+
+              <View style={styles.dualActions}>
+                <TouchableOpacity
+                  style={styles.secondaryBtn}
+                  onPress={() => setActiveStep("content")}
                 >
-                  {PRESET_QR_COLORS.map((c) => (
-                    <TouchableOpacity
-                      key={c.hex}
-                      onPress={() => setFgColor(c.hex)}
-                      style={[
-                        styles.colorDot,
-                        { backgroundColor: c.hex },
-                        fgColor === c.hex && styles.colorDotSelected,
-                      ]}
-                      accessibilityLabel={c.name}
+                  <View style={styles.btnRow}>
+                    <IconArrowRight
+                      size={16}
+                      color={colors.primary}
+                      strokeWidth={2.2}
                     />
-                  ))}
-                </ScrollView>
-
-                <Text style={[styles.sectionLabel, styles.mt]}>רקע</Text>
-                <View style={styles.bgModeRow}>
-                  {[
-                    { id: "none", label: "ללא" },
-                    { id: "solid", label: "צבע אחיד" },
-                  ].map((m) => (
-                    <TouchableOpacity
-                      key={m.id}
-                      onPress={() => setBgColorMode(m.id)}
-                      style={[
-                        styles.modeChip,
-                        bgColorMode === m.id && styles.modeChipOn,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.modeChipText,
-                          bgColorMode === m.id && styles.modeChipTextOn,
-                        ]}
-                      >
-                        {m.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {bgColorMode === "solid" && (
-                  <>
-                    <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={styles.paletteRow}
-                    >
-                      {PRESET_BG_COLORS.map((c) => (
-                        <TouchableOpacity
-                          key={c.hex}
-                          onPress={() => setBgColor(c.hex)}
-                          style={[
-                            styles.colorDot,
-                            { backgroundColor: c.hex },
-                            bgColor === c.hex && styles.colorDotSelected,
-                          ]}
-                        />
-                      ))}
-                    </ScrollView>
-                  </>
-                )}
-
+                    <Text style={styles.secondaryBtnText}>חזרה לתוכן</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.primaryBtn, styles.primaryBtnHalf]}
+                  onPress={() => setActiveStep("export")}
+                >
+                  <View style={styles.btnRow}>
+                    <Text style={styles.primaryBtnText}>המשך להורדה</Text>
+                    <IconArrowLeft
+                      size={16}
+                      color={colors.white}
+                      strokeWidth={2.2}
+                    />
+                  </View>
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
+          ) : null}
 
-            {activeTab === "shape" && (
-              <View style={styles.tabBody}>
-                <Text style={styles.sectionLabel}>סוג גוף</Text>
-                <View style={styles.shapeRow}>
-                  {BODY_SHAPES.map((s, idx) => (
-                    <SvgThumbButton
-                      key={s.id}
-                      assetModule={BODY_SHAPE_MODULES[idx]}
-                      size={44}
-                      selected={dotsType === s.id}
-                      onPress={() => setDotsType(s.id)}
-                      borderColor={colors.border}
-                      activeBorderColor={colors.primary}
-                    />
-                  ))}
+          {activeStep === "export" ? (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <View style={styles.stepTag}>
+                  <Text style={styles.stepTagText}>3</Text>
                 </View>
-                <Text style={[styles.sectionLabel, styles.mt]}>פינות</Text>
-                <View style={styles.shapeRow}>
-                  {CORNER_SHAPES.map((s, idx) => (
-                    <SvgThumbButton
-                      key={s.id}
-                      assetModule={CORNER_SHAPE_MODULES[idx]}
-                      size={44}
-                      selected={cornersType === s.id}
-                      onPress={() => setCornersType(s.id)}
-                      borderColor={colors.border}
-                      activeBorderColor={colors.primary}
-                    />
-                  ))}
-                </View>
+                <Text style={styles.cardTitle}>הורדה ושמירה</Text>
               </View>
-            )}
 
-            {activeTab === "logo" && (
-              <View style={styles.tabBody}>
-                <Text style={styles.sectionLabel}>צורת לוגו במרכז</Text>
-                <View style={styles.bgModeRow}>
-                  {[
-                    { id: "square", label: "חור מרובע" },
-                    { id: "circle", label: "חור עגול" },
-                    { id: "overlay", label: "ללא חור" },
-                  ].map((m) => (
-                    <TouchableOpacity
-                      key={m.id}
-                      onPress={() => setLogoShape(m.id)}
-                      style={[
-                        styles.modeChip,
-                        logoShape === m.id && styles.modeChipOn,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.modeChipText,
-                          logoShape === m.id && styles.modeChipTextOn,
-                        ]}
-                      >
-                        {m.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+              <QrPreviewComposite {...previewProps} />
 
-                <View style={styles.bgModeRow}>
-                  {[
-                    { id: "preset", label: "מוכנים" },
-                    { id: "gallery", label: "גלריה" },
-                    { id: "url", label: "קישור" },
-                  ].map((m) => (
-                    <TouchableOpacity
-                      key={m.id}
-                      onPress={() => {
-                        clearLogo();
-                        setSelectedPresetId(null);
-                        setLogoInputMode(m.id);
-                      }}
-                      style={[
-                        styles.modeChip,
-                        logoInputMode === m.id && styles.modeChipOn,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.modeChipText,
-                          logoInputMode === m.id && styles.modeChipTextOn,
-                        ]}
-                      >
-                        {m.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-
-                {logoInputMode === "preset" && (
-                  <View style={styles.presetGrid}>
-                    {PRESET_BRAND_MODULES.map((p) => (
-                      <SvgThumbButton
-                        key={p.id}
-                        assetModule={p.module}
-                        size={40}
-                        selected={
-                          selectedPresetId === p.id && Boolean(logoUrl)
-                        }
-                        disabled={logoLoadingPreset}
-                        onPress={async () => {
-                          setSelectedPresetId(p.id);
-                          await selectPresetLogo(p);
-                        }}
-                        borderColor={colors.border}
-                        activeBorderColor={colors.primary}
-                      />
-                    ))}
+              <TouchableOpacity
+                style={[
+                  styles.exportBtn,
+                  (exporting || !qrImage) && styles.btnDisabled,
+                ]}
+                onPress={exportQr}
+                disabled={exporting || !qrImage}
+              >
+                {exporting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <View style={styles.btnRow}>
+                    <IconShare2
+                      size={20}
+                      color={colors.white}
+                      strokeWidth={2.2}
+                    />
+                    <Text style={styles.exportBtnText}>שתף / שמור</Text>
                   </View>
                 )}
+              </TouchableOpacity>
 
-                {logoInputMode === "gallery" && (
-                  <TouchableOpacity
-                    style={styles.galleryBtn}
-                    onPress={pickLogoFromGallery}
+              <View style={styles.saveBox}>
+                <Text style={styles.saveLabel}>שמירה לאוסף (בחשבון)</Text>
+                <TextInput
+                  value={saveName}
+                  onChangeText={setSaveName}
+                  placeholder="שם לקוד, למשל: כרטיס ביקור"
+                  style={styles.input}
+                  textAlign="right"
+                  placeholderTextColor={colors.subText}
+                />
+                <TouchableOpacity
+                  style={[styles.saveBtn, saveQrSaving && styles.btnDisabled]}
+                  onPress={handleSave}
+                  disabled={saveQrSaving || !qrImage}
+                >
+                  {saveQrSaving ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <View style={styles.btnRow}>
+                      <IconDeviceFloppy
+                        size={18}
+                        color={colors.white}
+                        strokeWidth={2.2}
+                      />
+                      <Text style={styles.saveBtnText}>שמור לאוסף</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                {saveQrMessage ? (
+                  <Text
+                    style={[
+                      styles.saveMsg,
+                      saveQrMessage.includes("נשמר")
+                        ? styles.saveMsgOk
+                        : styles.saveMsgErr,
+                    ]}
                   >
-                    <Text style={styles.galleryBtnText}>בחר תמונה מהמכשיר</Text>
-                  </TouchableOpacity>
-                )}
-
-                {logoInputMode === "url" && (
-                  <TextInput
-                    value={
-                      logoUrl?.startsWith("data:") ? "" : logoUrl
-                    }
-                    onChangeText={(t) => {
-                      setLogoInsetScale(1);
-                      setLogoUrl(t);
-                      setError("");
-                    }}
-                    placeholder="https://.../logo.png"
-                    style={styles.input}
-                    autoCapitalize="none"
-                    keyboardType="url"
-                    textAlign="right"
-                  />
-                )}
-
-                {logoUrl ? (
-                  <TouchableOpacity
-                    onPress={handleClearLogo}
-                    style={styles.clearLogo}
-                  >
-                    <Text style={styles.clearLogoText}>הסר לוגו</Text>
-                  </TouchableOpacity>
+                    {saveQrMessage}
+                  </Text>
                 ) : null}
               </View>
-            )}
 
-            {activeTab === "sticker" && (
-              <View style={styles.tabBody}>
-                <Text style={styles.sectionLabel}>מסגרת סטיקר</Text>
-                <View style={styles.stickerGrid}>
-                  {STICKER_OPTIONS.map((s) => (
-                    <TouchableOpacity
-                      key={s.id}
-                      onPress={() => setStickerType(s.id)}
-                      style={[
-                        styles.stickerCell,
-                        stickerType === s.id && styles.stickerCellOn,
-                      ]}
-                    >
-                      {s.id === "none" ? (
-                        <Text style={styles.stickerNoneText}>ללא</Text>
-                      ) : (
-                        <Image
-                          source={s.thumb}
-                          style={styles.stickerThumb}
-                          resizeMode="cover"
-                        />
-                      )}
-                    </TouchableOpacity>
-                  ))}
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={() => setActiveStep("style")}
+              >
+                <View style={styles.btnRow}>
+                  <IconArrowRight
+                    size={16}
+                    color={colors.primary}
+                    strokeWidth={2.2}
+                  />
+                  <Text style={styles.secondaryBtnText}>חזרה לעיצוב</Text>
                 </View>
-              </View>
-            )}
-          </View>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </ScrollView>
 
-          <View style={styles.card}>
-            <Text style={styles.previewTitle}>תצוגה מקדימה</Text>
+        {qrImage && !loading ? (
+          <View style={styles.offscreenCapture} pointerEvents="none">
             <QrPreviewComposite
-              colors={colors}
-              qrImage={qrImage}
-              loading={loading}
-              error={error}
-              bgColorMode={bgColorMode}
-              bgSolidColor={bgColor}
-              stickerType={stickerType}
+              ref={previewCaptureRef}
+              {...previewProps}
+              previewSize={480}
+              forExport
             />
           </View>
-
-          <AuthFooter />
-        </ScrollView>
-        <BackToTopButton visible={showBackToTop} scrollRef={scrollRef} />
+        ) : null}
       </View>
     </ScreenWithAccessibility>
   );
@@ -458,41 +398,68 @@ export default function QrGeneratorScreen() {
 
 const createStyles = (colors) =>
   StyleSheet.create({
-    pageInner: {
-      flex: 1,
-      overflow: "visible",
-    },
-    content: {
-      padding: 16,
-      paddingBottom: 120,
-      gap: 16,
-    },
-    hero: {
+    pageInner: { flex: 1, overflow: "visible" },
+    content: { padding: 16, paddingBottom: 32, gap: 14 },
+    stepIndicator: {
+      flexDirection: "row-reverse",
       alignItems: "center",
+      justifyContent: "center",
+      paddingVertical: 8,
       marginBottom: 4,
     },
-    heroTitle: {
-      fontSize: 24,
-      fontWeight: "800",
-      color: colors.text,
-      textAlign: "center",
+    stepItem: { alignItems: "center", gap: 6, minWidth: 64 },
+    stepBadge: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: colors.inputBg,
+      borderWidth: 2,
+      borderColor: colors.border,
+      alignItems: "center",
+      justifyContent: "center",
     },
+    stepBadgeActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    stepBadgeDone: {
+      backgroundColor: `${colors.primary}22`,
+      borderColor: colors.primary,
+    },
+    stepBadgeText: {
+      fontSize: 14,
+      fontWeight: "800",
+      color: colors.subText,
+    },
+    stepBadgeTextActive: { color: colors.white },
+    stepLabel: { fontSize: 12, fontWeight: "600", color: colors.subText },
+    stepLabelActive: { color: colors.primary, fontWeight: "800" },
+    stepLine: {
+      flex: 1,
+      height: 2,
+      backgroundColor: colors.border,
+      marginHorizontal: 6,
+      maxWidth: 40,
+    },
+    stepLineDone: { backgroundColor: colors.primary },
     card: {
       backgroundColor: colors.card,
-      borderRadius: 16,
-      padding: 16,
+      borderRadius: 20,
+      padding: 18,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
       shadowColor: "#000",
       shadowOpacity: 0.06,
-      shadowRadius: 8,
-      elevation: 2,
+      shadowRadius: 12,
+      elevation: 3,
+      gap: 14,
     },
-    stepRow: {
+    cardHeader: {
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 10,
-      marginBottom: 12,
     },
-    stepBadge: {
+    stepTag: {
       width: 28,
       height: 28,
       borderRadius: 14,
@@ -500,179 +467,106 @@ const createStyles = (colors) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    stepBadgeText: {
+    stepTagText: {
       color: colors.white,
-      fontWeight: "800",
       fontSize: 14,
+      fontWeight: "800",
     },
-    stepTitle: {
-      fontSize: 17,
-      fontWeight: "700",
-      color: colors.text,
-    },
-    label: {
-      fontSize: 15,
-      fontWeight: "600",
+    cardTitle: {
+      flex: 1,
+      fontSize: 19,
+      fontWeight: "800",
       color: colors.text,
       textAlign: "right",
-      marginBottom: 8,
+    },
+    contentBox: {
+      padding: 14,
+      borderRadius: 16,
+      backgroundColor: colors.background,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+    },
+    previewInline: {
+      alignItems: "center",
+      paddingVertical: 4,
+    },
+    exportBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      minHeight: 50,
+      marginTop: 4,
+    },
+    exportBtnText: {
+      color: colors.white,
+      fontWeight: "800",
+      fontSize: 16,
+    },
+    primaryBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: 14,
+      paddingVertical: 14,
+      alignItems: "center",
+    },
+    primaryBtnHalf: { flex: 1 },
+    primaryBtnText: { color: colors.white, fontWeight: "800", fontSize: 16 },
+    secondaryBtn: {
+      paddingVertical: 12,
+      alignItems: "center",
+      flex: 1,
+    },
+    secondaryBtnText: {
+      color: colors.primary,
+      fontWeight: "700",
+      fontSize: 14,
+    },
+    dualActions: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 8,
+      marginTop: 4,
+    },
+    btnRow: {
+      flexDirection: "row-reverse",
+      alignItems: "center",
+      gap: 8,
     },
     input: {
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 10,
-      backgroundColor: colors.inputBg,
-      fontSize: 15,
-      color: colors.text,
-    },
-    tabBar: {
-      flexDirection: "row-reverse",
-      gap: 8,
-      marginBottom: 12,
-      paddingVertical: 4,
-    },
-    tabPill: {
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      borderRadius: 999,
-      backgroundColor: colors.inputBg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    tabPillActive: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    tabPillText: {
-      fontSize: 14,
-      fontWeight: "600",
-      color: colors.subText,
-    },
-    tabPillTextActive: {
-      color: colors.white,
-    },
-    tabBody: {
-      marginTop: 4,
-    },
-    sectionLabel: {
-      fontSize: 15,
-      fontWeight: "700",
-      color: colors.text,
-      textAlign: "right",
-      marginBottom: 10,
-    },
-    mt: { marginTop: 16 },
-    paletteRow: {
-      flexDirection: "row-reverse",
-      gap: 10,
-      paddingVertical: 4,
-    },
-    colorDot: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-    },
-    colorDotSelected: {
-      borderWidth: 3,
-      borderColor: colors.primary,
-    },
-    bgModeRow: {
-      flexDirection: "row-reverse",
-      flexWrap: "wrap",
-      gap: 8,
-      marginBottom: 12,
-    },
-    modeChip: {
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-      borderRadius: 999,
-      backgroundColor: colors.inputBg,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    modeChipOn: {
-      backgroundColor: colors.primary,
-      borderColor: colors.primary,
-    },
-    modeChipText: {
-      fontSize: 13,
-      fontWeight: "600",
-      color: colors.text,
-    },
-    modeChipTextOn: {
-      color: colors.white,
-    },
-    shapeRow: {
-      flexDirection: "row-reverse",
-      flexWrap: "wrap",
-      gap: 10,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    presetGrid: {
-      flexDirection: "row-reverse",
-      flexWrap: "wrap",
-      gap: 10,
-      marginTop: 8,
-      justifyContent: "center",
-    },
-    galleryBtn: {
-      marginTop: 8,
+      borderRadius: 12,
+      paddingHorizontal: 14,
       paddingVertical: 12,
-      borderRadius: 12,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-    },
-    galleryBtnText: {
-      color: colors.white,
-      fontWeight: "700",
-      fontSize: 15,
-    },
-    clearLogo: {
-      marginTop: 10,
-      alignSelf: "flex-end",
-    },
-    clearLogoText: {
-      color: colors.primary,
-      fontWeight: "600",
-      fontSize: 14,
-    },
-    stickerGrid: {
-      flexDirection: "row-reverse",
-      flexWrap: "wrap",
-      gap: 10,
-      justifyContent: "flex-start",
-    },
-    stickerCell: {
-      width: "22%",
-      aspectRatio: 1,
-      borderRadius: 12,
-      overflow: "hidden",
-      borderWidth: 2,
-      borderColor: colors.border,
       backgroundColor: colors.inputBg,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    stickerCellOn: {
-      borderColor: colors.primary,
-    },
-    stickerThumb: {
-      width: "100%",
-      height: "100%",
-    },
-    stickerNoneText: {
-      fontSize: 12,
-      fontWeight: "600",
-      color: colors.subText,
-    },
-    previewTitle: {
       fontSize: 15,
-      fontWeight: "600",
+      color: colors.text,
+    },
+    saveBox: { gap: 10, marginTop: 4 },
+    saveLabel: {
+      fontSize: 15,
+      fontWeight: "700",
       color: colors.text,
       textAlign: "right",
-      marginBottom: 12,
+    },
+    saveBtn: {
+      backgroundColor: colors.primaryDark,
+      borderRadius: 14,
+      paddingVertical: 13,
+      alignItems: "center",
+    },
+    saveBtnText: { color: colors.white, fontWeight: "800", fontSize: 15 },
+    saveMsg: { textAlign: "center", fontSize: 14 },
+    saveMsgOk: { color: colors.primary, fontWeight: "700" },
+    saveMsgErr: { color: colors.error },
+    btnDisabled: { opacity: 0.6 },
+    offscreenCapture: {
+      position: "absolute",
+      left: -6000,
+      top: 0,
+      width: 480,
+      height: 480,
+      opacity: 0.01,
     },
   });

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { IconX } from "@tabler/icons-react-native";
 import { useAccessibility } from "../context/AccessibilityContext";
 import ThemeToggle from "./ThemeToggle";
 
@@ -41,7 +42,7 @@ export default function AccessibilityMenu({ visible, onClose }) {
               style={styles.closeBtn}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Text style={styles.closeBtnText}>✕</Text>
+              <IconX size={20} color="#fff" strokeWidth={2} />
             </TouchableOpacity>
           </View>
 
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   fontRow: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     justifyContent: "center",
     gap: 6,
   },

@@ -1,45 +1,32 @@
 import React, { useMemo } from "react";
 import {
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { IconQrcode, IconScan } from "@tabler/icons-react-native";
 import { useNavigation } from "@react-navigation/native";
-import { useAuth } from "../context/AuthContext";
 import { useAccessibility } from "../context/AccessibilityContext";
 import ScreenWithAccessibility from "../components/ScreenWithAccessibility";
 
 export default function WelcomeScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth();
   const { colors } = useAccessibility();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const isAuthenticated = !!user;
 
   const handleScanQr = () => {
     navigation.navigate("QrScanner");
   };
 
   const handleCreateQr = () => {
-    if (isAuthenticated) {
-      navigation.navigate("QrGenerator");
-    } else {
-      navigation.navigate("Login");
-    }
+    navigation.navigate("QrGenerator");
   };
 
   return (
     <ScreenWithAccessibility>
     <View style={styles.container}>
-      <View style={styles.logoSection}>
-        <Image
-          source={require("../../assets/images/logo-full.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-      </View>
+      <Text style={styles.greeting}>מה תרצה לעשות?</Text>
 
       <View style={styles.cardsSection}>
         <TouchableOpacity
@@ -48,7 +35,7 @@ export default function WelcomeScreen() {
           activeOpacity={0.85}
         >
           <View style={styles.cardIcon}>
-            <Text style={styles.cardIconText}>📷</Text>
+            <IconScan size={28} color={colors.primary} strokeWidth={1.75} />
           </View>
           <Text style={styles.cardTitle}>סרוק QR קיים</Text>
           <Text style={styles.cardSubtitle}>
@@ -62,11 +49,11 @@ export default function WelcomeScreen() {
           activeOpacity={0.85}
         >
           <View style={[styles.cardIcon, styles.cardIconSecondary]}>
-            <Text style={styles.cardIconText}>✨</Text>
+            <IconQrcode size={28} color={colors.text} strokeWidth={1.75} />
           </View>
           <Text style={styles.cardTitle}>צור QR חדש</Text>
           <Text style={styles.cardSubtitle}>
-            יצירת קוד QR אישי – נדרשת התחברות או הרשמה
+            עיצוב אישי, הורדה ושמירה לחשבון
           </Text>
         </TouchableOpacity>
       </View>
@@ -80,16 +67,14 @@ const createStyles = (colors) => StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
     paddingHorizontal: 24,
+    paddingTop: 8,
   },
-  logoSection: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 32,
-    paddingBottom: 40,
-  },
-  logo: {
-    width: 220,
-    height: 72,
+  greeting: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: colors.text,
+    textAlign: "right",
+    marginBottom: 20,
   },
   cardsSection: {
     flex: 1,
@@ -105,27 +90,23 @@ const createStyles = (colors) => StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     borderWidth: 1,
-    borderColor: "rgba(20, 184, 166, 0.15)",
+    borderColor: `${colors.primary}26`,
   },
   cardSecondary: {
-    borderColor: "rgba(107, 114, 128, 0.12)",
+    borderColor: `${colors.border}`,
   },
   cardIcon: {
     width: 52,
     height: 52,
     borderRadius: 14,
-    backgroundColor: "rgba(20, 184, 166, 0.12)",
-    alignItems: "center",
+    backgroundColor: `${colors.primary}1F`,    alignItems: "center",
     justifyContent: "center",
     marginBottom: 16,
+    alignSelf: "flex-start",
   },
   cardIconSecondary: {
-    backgroundColor: "rgba(107, 114, 128, 0.1)",
-  },
-  cardIconText: {
-    fontSize: 26,
-  },
-  cardTitle: {
+    backgroundColor: colors.toggleBg,
+  },  cardTitle: {
     fontSize: 20,
     fontWeight: "700",
     color: colors.text,

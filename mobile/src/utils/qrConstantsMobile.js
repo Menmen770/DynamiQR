@@ -1,3 +1,20 @@
+import {
+  IconBrandFacebook,
+  IconBrandInstagram,
+  IconBrandLinkedin,
+  IconBrandTiktok,
+  IconBrandWhatsapp,
+  IconBrandX,
+  IconBrandYoutube,
+  IconFileText,
+  IconLink,
+  IconMail,
+  IconMessageCircle,
+  IconPhone,
+  IconUser,
+  IconWifi,
+} from "@tabler/icons-react-native";
+
 export const PRESET_QR_COLORS = [
   { name: "שחור", hex: "#111111" },
   { name: "גרפיט", hex: "#1f2937" },
@@ -42,7 +59,49 @@ export const CORNER_SHAPES = [
   { id: "extra-rounded", label: "מעוגל+" },
   { id: "classy", label: "קלאסי" },
   { id: "classy-rounded", label: "קלאסי מעוגל" },
-  { id: "dots", label: "נקודות" },
+];
+
+export const ERROR_CORRECTION_LEVELS = [
+  { id: "L", label: "L", description: "מהיר ודחוס" },
+  { id: "M", label: "M", description: "איזון טוב" },
+  { id: "Q", label: "Q", description: "מומלץ עם לוגו" },
+  { id: "H", label: "H", description: "עמידות מקסימלית" },
+];
+
+export const QR_TYPES_MAIN = [
+  { value: "url", label: "אתר", icon: IconLink },
+  { value: "pdf", label: "קובץ PDF", icon: IconFileText },
+  { value: "email", label: "אימייל", icon: IconMail },
+  { value: "contact", label: "איש קשר", icon: IconUser },
+  { value: "whatsapp", label: "וואטסאפ", icon: IconBrandWhatsapp },
+  { value: "phone", label: "טלפון", icon: IconPhone },
+];
+
+export const QR_TYPES_MORE = [
+  { value: "sms", label: "הודעת SMS", icon: IconMessageCircle },
+  { value: "wifi", label: "Wi-Fi", icon: IconWifi },
+  { value: "facebook", label: "פייסבוק", icon: IconBrandFacebook },
+  { value: "instagram", label: "אינסטגרם", icon: IconBrandInstagram },
+  { value: "twitter", label: "X / טוויטר", icon: IconBrandX },
+  { value: "linkedin", label: "לינקדאין", icon: IconBrandLinkedin },
+  { value: "youtube", label: "יוטיוב", icon: IconBrandYoutube },
+  { value: "tiktok", label: "טיקטוק", icon: IconBrandTiktok },
+];
+
+export const QR_TYPES = [...QR_TYPES_MAIN, ...QR_TYPES_MORE];
+
+export const GENERATOR_STEPS = [
+  { id: "content", label: "תוכן", icon: "1" },
+  { id: "style", label: "עיצוב", icon: "2" },
+  { id: "export", label: "הורדה", icon: "3" },
+];
+
+export const STYLE_TABS = [
+  { id: "color", label: "צבע" },
+  { id: "shape", label: "צורה" },
+  { id: "logo", label: "לוגו" },
+  { id: "sticker", label: "סטיקר" },
+  { id: "advanced", label: "מתקדם" },
 ];
 
 /** כמו ב־stickerCompose באתר — QR קטן יותר בתוך החור */

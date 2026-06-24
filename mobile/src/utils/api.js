@@ -72,6 +72,17 @@ export function getApiBaseUrl() {
   return `http://${host}:${API_PORT}`;
 }
 
+/** בסיס לקישור QR דינמי — חייב להיות נגיש למכשיר שסורק */
+export function getDynamicQrRedirectBase() {
+  try {
+    const explicit = process.env.EXPO_PUBLIC_QR_BASE;
+    if (typeof explicit === "string" && explicit.trim()) {
+      return explicit.trim().replace(/\/$/, "");
+    }
+  } catch (_) {}
+  return getApiBaseUrl();
+}
+
 export async function getStoredAuthToken() {
   try {
     return await AsyncStorage.getItem(AUTH_TOKEN_KEY);

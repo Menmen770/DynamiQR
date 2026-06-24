@@ -1,135 +1,166 @@
 import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, TouchableOpacity, View } from "react-native";
-import Svg, { Path } from "react-native-svg";
+import {
+  Animated,
+  Easing,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
+import { IconMoon, IconSun } from "@tabler/icons-react-native";
+import { IS_RTL } from "../bootstrap/rtl";
 
-const TRACK_WIDTH = 52;
-const TRACK_HEIGHT = 28;
-const THUMB_SIZE = 18;
-const THUMB_MARGIN = 5;
+const TRACK_WIDTH = 58;
+const TRACK_HEIGHT = 30;
+const PADDING = 3;
+const THUMB_SIZE = 24;
+const TRAVEL = TRACK_WIDTH - PADDING * 2 - THUMB_SIZE;
+const ICON_SIZE = 14;
+
+const LIGHT_TRACK = "#FDF0C4";
+const LIGHT_THUMB = "#F5C518";
+const DARK_TRACK = "#042f44";
+const DARK_THUMB = "#3db8e8";
 
 export default function ThemeToggle({ value, onValueChange }) {
-  const slideAnim = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const progress = useRef(new Animated.Value(value ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.timing(slideAnim, {
-      toValue: value ? 0 : 1,
-      duration: 300,
-      useNativeDriver: true,
+    Animated.timing(progress, {
+      toValue: value ? 1 : 0,
+      duration: 320,
+      easing: Easing.inOut(Easing.ease),
+      useNativeDriver: false,
     }).start();
-  }, [value, slideAnim]);
+  }, [value, progress]);
 
-  const thumbX = slideAnim.interpolate({
+  const thumbTravel = progress.interpolate({
     inputRange: [0, 1],
-    outputRange: [THUMB_MARGIN, TRACK_WIDTH - THUMB_MARGIN - THUMB_SIZE],
+    outputRange: [0, TRAVEL],
   });
 
-  const trackColor = value ? "#2a2a2a" : "#00a6ff";
+  const thumbTranslateX = IS_RTL
+    ? Animated.multiply(thumbTravel, -1)
+    : thumbTravel;
+
+  const trackBg = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [LIGHT_TRACK, DARK_TRACK],
+  });
+
+  const thumbBg = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [LIGHT_THUMB, DARK_THUMB],
+  });
+
+  const sunOpacity = progress.interpolate({
+    inputRange: [0, 0.4, 1],
+    outputRange: [1, 0, 0],
+  });
+
+  const moonOpacity = progress.interpolate({
+    inputRange: [0, 0.6, 1],
+    outputRange: [0, 0, 1],
+  });
 
   return (
-    <TouchableOpacity
-      activeOpacity={1}
+    <Pressable
       onPress={() => onValueChange(!value)}
-      style={styles.container}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      accessibilityLabel={value ? "מצב לילה" : "מצב יום"}
+      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+      style={styles.hitArea}
     >
-      <View style={[styles.track, { backgroundColor: trackColor }]}>
-        {/* Stars - visible in dark mode */}
-        {value && (
-          <View style={styles.stars}>
-            <View style={[styles.star, { left: 28, top: 5 }]} />
-            <View style={[styles.star, { left: 24, top: 12 }]} />
-            <View style={[styles.star, { left: 32, top: 9 }]} />
-          </View>
-        )}
-
-        {/* Cloud - visible in light mode (simplified cloud shape) */}
-        {!value && (
-          <Svg width={24} height={16} style={styles.cloud} viewBox="0 0 36 24">
-            <Path
-              fill="#fff"
-              d="M28 14c0-2.2-1.8-4-4-4-1.2 0-2.2.5-2.9 1.3-1.5-.8-3.3-.3-4.1 1.2-1.8.2-3.2 1.7-3.2 3.5 0 2 1.6 3.6 3.6 3.6h16.8c2 0 3.6-1.6 3.6-3.6 0-1.8-1.4-3.3-3.2-3.5-.8-1.5-2.6-2-4.1-1.2-.7-.8-1.7-1.3-2.9-1.3-2.2 0-4 1.8-4 4z"
-            />
-          </Svg>
-        )}
-
-        {/* Sliding thumb */}
+      <Animated.View style={[styles.track, { backgroundColor: trackBg }]}>
         <Animated.View
           style={[
-            styles.thumbWrapper,
+            styles.thumb,
+            IS_RTL ? styles.thumbRtl : styles.thumbLtr,
             {
-              transform: [{ translateX: thumbX }],
+              backgroundColor: thumbBg,
+              transform: [{ translateX: thumbTranslateX }],
             },
           ]}
         >
-          <View
-            style={[
-              styles.thumb,
-              value ? styles.thumbMoon : styles.thumbSun,
-            ]}
-          />
+          <View style={styles.iconLayer}>
+            <Animated.View style={[styles.iconSlot, { opacity: sunOpacity }]}>
+              <IconSun
+                size={ICON_SIZE}
+                color="#ffffff"
+                strokeWidth={2.1}
+              />
+            </Animated.View>
+            <Animated.View
+              style={[styles.iconSlot, styles.iconSlotOverlay, { opacity: moonOpacity }]}
+            >
+              <IconMoon
+                size={ICON_SIZE}
+                color="#ffffff"
+                strokeWidth={2.1}
+              />
+            </Animated.View>
+          </View>
         </Animated.View>
-      </View>
-    </TouchableOpacity>
+      </Animated.View>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  hitArea: {
     alignSelf: "center",
+    direction: "ltr",
   },
   track: {
     width: TRACK_WIDTH,
     height: TRACK_HEIGHT,
-    borderRadius: 14,
+    borderRadius: TRACK_HEIGHT / 2,
+    justifyContent: "center",
     overflow: "hidden",
-    position: "relative",
-  },
-  thumbWrapper: {
-    position: "absolute",
-    left: 0,
-    bottom: THUMB_MARGIN,
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: 9,
+    direction: "ltr",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 2,
+    elevation: 2,
   },
   thumb: {
+    position: "absolute",
+    top: PADDING,
     width: THUMB_SIZE,
     height: THUMB_SIZE,
-    borderRadius: 9,
-  },
-  thumbMoon: {
-    backgroundColor: "#fff",
+    borderRadius: THUMB_SIZE / 2,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    direction: "ltr",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.12,
+    shadowRadius: 1,
+    elevation: 2,
   },
-  thumbSun: {
-    backgroundColor: "#ffcf48",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 4,
+  thumbLtr: {
+    left: PADDING,
   },
-  stars: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+  thumbRtl: {
+    right: PADDING,
   },
-  star: {
-    position: "absolute",
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#fff",
+  iconLayer: {
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    direction: "ltr",
   },
-  cloud: {
-    position: "absolute",
-    bottom: -6,
-    left: -4,
-    opacity: 0.9,
+  iconSlot: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconSlotOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

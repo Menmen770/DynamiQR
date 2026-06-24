@@ -13,12 +13,19 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconMail,
+  IconShield,
+  IconX,
+} from "@tabler/icons-react-native";
 import { useAuth } from "../context/AuthContext";
 import { useAccessibility } from "../context/AccessibilityContext";
+import { BRAND_LOGO } from "../constants/brand";
+import ThemeToggle from "./ThemeToggle";
 import { apiFetchWithTimeout, getApiBaseUrl, parseJsonResponse } from "../utils/api";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const RECENT_QR_KEY = "qrMasterRecentHistory";
+import { row, textStart } from "../utils/layout";
 
 const getGreetingByHour = () => {
   const hour = new Date().getHours();
@@ -28,63 +35,34 @@ const getGreetingByHour = () => {
   return "לילה טוב";
 };
 
-const formatTime = (value) => {
-  try {
-    return new Date(value).toLocaleString("he-IL", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return "";
-  }
-};
+function getActiveRouteName(state) {
+  if (!state) return undefined;
+  const route = state.routes[state.index];
+  if (route.state) return getActiveRouteName(route.state);
+  return route.name;
+}
 
 export default function AppHeader() {
   const navigation = useNavigation();
-  const { user, setUser, logout, getFirstName, checkingAuth } = useAuth();
-  const { colors } = useAccessibility();
+  const { user, setUser, logout, getFirstName } = useAuth();
+  const { colors, darkMode, setDarkMode } = useAccessibility();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const currentRoute =
-    navigation.getState()?.routes?.[navigation.getState()?.index]?.name;
-  const isLogin = currentRoute === "Login";
-  const isRegister = currentRoute === "Register";
-  const isWelcome = currentRoute === "Welcome";
-  const isQrScanner = currentRoute === "QrScanner";
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [expandedPanel, setExpandedPanel] = useState(null);
-  const [recentQrs, setRecentQrs] = useState([]);
   const [profileForm, setProfileForm] = useState({ firstName: "" });
   const [profileMessage, setProfileMessage] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
 
-  const isAuthenticated = !!user;
+  const currentRoute = getActiveRouteName(navigation.getState());
+  const isOnScanner = currentRoute === "QrScanner";
+  const isOnOverlayScreen = ["Contact", "Privacy"].includes(currentRoute);
 
   useEffect(() => {
     if (user) {
-      setProfileForm({
-        firstName: getFirstName(user?.fullName),
-      });
+      setProfileForm({ firstName: getFirstName(user?.fullName) });
     }
   }, [user, getFirstName]);
-
-  useEffect(() => {
-    if (menuVisible) {
-      loadRecentQrs();
-    }
-  }, [menuVisible]);
-
-  const loadRecentQrs = async () => {
-    try {
-      const raw = await AsyncStorage.getItem(RECENT_QR_KEY);
-      const parsed = raw ? JSON.parse(raw) : [];
-      setRecentQrs(Array.isArray(parsed) ? parsed.slice(0, 5) : []);
-    } catch {
-      setRecentQrs([]);
-    }
-  };
 
   const togglePanel = (panel) => {
     setProfileMessage("");
@@ -100,20 +78,14 @@ export default function AppHeader() {
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fullName: profileForm.firstName,
-          }),
+          body: JSON.stringify({ fullName: profileForm.firstName }),
         },
         20000,
       );
       const data = await parseJsonResponse(response);
-      if (!response.ok) {
-        throw new Error(data?.error || "שמירה נכשלה");
-      }
+      if (!response.ok) throw new Error(data?.error || "שמירה נכשלה");
       setUser(data.user);
-      setProfileForm({
-        firstName: getFirstName(data.user.fullName),
-      });
+      setProfileForm({ firstName: getFirstName(data.user.fullName) });
       setProfileMessage("הפרטים נשמרו בהצלחה");
     } catch (err) {
       setProfileMessage(err.message || "שמירה נכשלה");
@@ -125,156 +97,80 @@ export default function AppHeader() {
   const handleLogout = async () => {
     setMenuVisible(false);
     await logout();
-    navigation.reset({ index: 0, routes: [{ name: "Welcome" }] });
   };
 
-  const firstName = getFirstName(user?.fullName) || "User";
-  const userInitial = firstName ? firstName.trim().charAt(0).toUpperCase() : "U";
+  const goToMyCodes = () => {
+    navigation.navigate("MainTabs", { screen: "MyCodes" });
+  };
+
+  const firstName = getFirstName(user?.fullName) || "משתמש";
+  const userInitial = firstName ? firstName.trim().charAt(0).toUpperCase() : "מ";
   const greeting = getGreetingByHour();
 
-  if (checkingAuth) {
-    return (
-      <SafeAreaView edges={["top"]} style={styles.safeArea}>
-        <View style={[styles.container, { justifyContent: "center" }]}>
-          <ActivityIndicator size="small" color={colors.primary} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const openStackScreen = (screen) => {
+    setMenuVisible(false);
+    navigation.navigate(screen);
+  };
+
+  if (isOnScanner || isOnOverlayScreen) return null;
 
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.actionsRow}>
-          {isQrScanner ? (
-            <TouchableOpacity
-              style={[styles.button, styles.outlineButton]}
-              onPress={() => navigation.navigate("Welcome")}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.buttonText, styles.outlineButtonText]}>
-                חזרה
-              </Text>
-            </TouchableOpacity>
-          ) : isLogin ? (
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.outlineButton]}
-                disabled
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.buttonText, styles.outlineButtonText]}>
-                  התחברות
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.filledButton]}
-                onPress={() => navigation.navigate("Register")}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.buttonText, styles.filledButtonText]}>
-                  הרשמה
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : isRegister ? (
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.outlineButton]}
-                onPress={() => navigation.goBack()}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.buttonText, styles.outlineButtonText]}>
-                  התחברות
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.filledButton]}
-                disabled
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.buttonText, styles.filledButtonText]}>
-                  הרשמה
-                </Text>
-              </TouchableOpacity>
-            </>
-          ) : isAuthenticated ? (
-            <TouchableOpacity
-              style={styles.userTrigger}
-              onPress={() => setMenuVisible(true)}
-              activeOpacity={0.8}
-            >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{userInitial}</Text>
-              </View>
-              <View style={styles.userText}>
-                <Text style={styles.greeting}>{greeting}</Text>
-                <Text style={styles.userName} numberOfLines={1}>
-                  {firstName}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={[styles.button, styles.outlineButton]}
-                onPress={() => navigation.navigate("Login")}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.buttonText, styles.outlineButtonText]}>
-                  התחברות
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.button, styles.filledButton]}
-                onPress={() => navigation.navigate("Register")}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.buttonText, styles.filledButtonText]}>
-                  הרשמה
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
+      <View style={styles.bar}>
+        <View style={styles.sideLeft}>
+          <TouchableOpacity
+            style={styles.logoTap}
+            onPress={goToMyCodes}
+            activeOpacity={0.85}
+            accessibilityLabel="קודים שמורים"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Image
+              source={BRAND_LOGO}
+              style={styles.brandLogoBar}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.brandContainer}
-          onPress={() => navigation.navigate("Welcome")}
-          activeOpacity={0.8}
-        >
-          <Image
-            source={require("../../assets/images/logo-full.png")}
-            style={styles.brandLogo}
-            resizeMode="contain"
-          />
-        </TouchableOpacity>
+        <View style={styles.sideRight}>
+          <View style={styles.userText}>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.userName} numberOfLines={1}>
+              {firstName}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => setMenuVisible(true)}
+            activeOpacity={0.7}
+            accessibilityLabel="הגדרות חשבון"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{userInitial}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <Modal
-        visible={menuVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setMenuVisible(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setMenuVisible(false)}
-        >
-          <Pressable
-            style={styles.menuCard}
-            onPress={(e) => e.stopPropagation()}
-          >
+      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
+          <Pressable style={styles.menuCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.menuHeader}>
+              <Text style={styles.menuTitle}>הגדרות</Text>
+              <TouchableOpacity onPress={() => setMenuVisible(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <IconX size={22} color={colors.subText} strokeWidth={2} />
+              </TouchableOpacity>
+            </View>
             <ScrollView style={styles.menuScroll}>
               <View style={styles.menuSection}>
-                <TouchableOpacity
-                  style={styles.expandBtn}
-                  onPress={() => togglePanel("profile")}
-                >
-                  <Text style={styles.expandBtnText}>עדכון פרטים</Text>
-                  <Text style={styles.chevron}>
-                    {expandedPanel === "profile" ? "▲" : "▼"}
-                  </Text>
+                <TouchableOpacity style={styles.expandBtn} onPress={() => togglePanel("profile")}>
+                  <Text style={styles.expandBtnText}>עדכון שם</Text>
+                  {expandedPanel === "profile" ? (
+                    <IconChevronUp size={18} color={colors.subText} strokeWidth={2} />
+                  ) : (
+                    <IconChevronDown size={18} color={colors.subText} strokeWidth={2} />
+                  )}
                 </TouchableOpacity>
                 {expandedPanel === "profile" && (
                   <View style={styles.panelContent}>
@@ -282,10 +178,9 @@ export default function AppHeader() {
                     <TextInput
                       style={styles.panelInput}
                       value={profileForm.firstName}
-                      onChangeText={(t) =>
-                        setProfileForm((p) => ({ ...p, firstName: t }))
-                      }
+                      onChangeText={(t) => setProfileForm((p) => ({ ...p, firstName: t }))}
                       placeholder="השם שלך"
+                      placeholderTextColor={colors.subText}
                       textAlign="right"
                     />
                     <Text style={styles.panelLabel}>אימייל</Text>
@@ -300,17 +195,17 @@ export default function AppHeader() {
                       onPress={handleProfileSave}
                       disabled={profileSaving}
                     >
-                      <Text style={styles.saveBtnText}>
-                        {profileSaving ? "שומר..." : "שמירת פרטים"}
-                      </Text>
+                      {profileSaving ? (
+                        <ActivityIndicator color={colors.white} size="small" />
+                      ) : (
+                        <Text style={styles.saveBtnText}>שמירת פרטים</Text>
+                      )}
                     </TouchableOpacity>
                     {profileMessage ? (
                       <Text
                         style={[
                           styles.profileMsg,
-                          profileMessage.includes("נשמרו")
-                            ? styles.profileMsgSuccess
-                            : styles.profileMsgError,
+                          profileMessage.includes("נשמרו") ? styles.profileMsgSuccess : styles.profileMsgError,
                         ]}
                       >
                         {profileMessage}
@@ -319,46 +214,30 @@ export default function AppHeader() {
                   </View>
                 )}
               </View>
-
               <View style={styles.menuSection}>
                 <TouchableOpacity
-                  style={styles.expandBtn}
-                  onPress={() => togglePanel("recent")}
+                  style={styles.menuLinkBtn}
+                  onPress={() => openStackScreen("Contact")}
                 >
-                  <Text style={styles.expandBtnText}>QR שמורים</Text>
-                  <Text style={styles.chevron}>
-                    {expandedPanel === "recent" ? "▲" : "▼"}
-                  </Text>
+                  <IconMail size={18} color={colors.primary} strokeWidth={2} />
+                  <Text style={styles.menuLinkText}>צור קשר</Text>
                 </TouchableOpacity>
-                {expandedPanel === "recent" && (
-                  <View style={styles.panelContent}>
-                    {recentQrs.length ? (
-                      recentQrs.map((item) => (
-                        <View key={item.id} style={styles.recentItem}>
-                          <Text style={styles.recentType}>{item.type}</Text>
-                          <Text
-                            style={styles.recentValue}
-                            numberOfLines={1}
-                          >
-                            {item.value}
-                          </Text>
-                          <Text style={styles.recentTime}>
-                            {formatTime(item.createdAt)}
-                          </Text>
-                        </View>
-                      ))
-                    ) : (
-                      <Text style={styles.emptyText}>עדיין אין QR שמורים</Text>
-                    )}
-                  </View>
-                )}
-              </View>
-
-              <View style={styles.menuSection}>
                 <TouchableOpacity
-                  style={styles.logoutBtn}
-                  onPress={handleLogout}
+                  style={styles.menuLinkBtn}
+                  onPress={() => openStackScreen("Privacy")}
                 >
+                  <IconShield size={18} color={colors.primary} strokeWidth={2} />
+                  <Text style={styles.menuLinkText}>פרטיות ותנאים</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.menuSection}>
+                <View style={styles.themeRow}>
+                  <Text style={styles.themeLabel}>מצב תצוגה</Text>
+                  <ThemeToggle value={darkMode} onValueChange={setDarkMode} />
+                </View>
+              </View>
+              <View style={styles.menuSection}>
+                <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
                   <Text style={styles.logoutBtnText}>התנתקות</Text>
                 </TouchableOpacity>
               </View>
@@ -370,233 +249,164 @@ export default function AppHeader() {
   );
 }
 
-const createStyles = (colors) => StyleSheet.create({
-  safeArea: {
-    backgroundColor: colors.card,
-  },
-  container: {
-    backgroundColor: colors.card,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e5e7eb",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  actionsRow: {
-    flexDirection: "row-reverse",
-    gap: 8,
-  },
-  button: {
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderWidth: 1,
-  },
-  outlineButton: {
-    borderColor: "#d1d5db",
-    backgroundColor: colors.white,
-  },
-  filledButton: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary,
-  },
-  buttonText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  outlineButtonText: {
-    color: colors.subText,
-  },
-  filledButtonText: {
-    color: colors.white,
-  },
-  userTrigger: {
-    flexDirection: "row-reverse",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: colors.card,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#0a9396",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  userText: {
-    alignItems: "flex-end",
-  },
-  greeting: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  userName: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: colors.text,
-    maxWidth: 100,
-  },
-  brandContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  brandLogo: {
-    height: 32,
-    width: 140,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    paddingTop: 60,
-    paddingHorizontal: 16,
-  },
-  menuCard: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    width: 280,
-    maxHeight: 400,
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  menuScroll: {
-    maxHeight: 380,
-  },
-  menuSection: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#edf2f5",
-  },
-  expandBtn: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#e5ecef",
-    backgroundColor: colors.card,
-  },
-  expandBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.text,
-  },
-  chevron: {
-    fontSize: 12,
-    color: colors.subText,
-  },
-  panelContent: {
-    marginTop: 8,
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#edf2f5",
-    backgroundColor: colors.card,
-  },
-  panelLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: colors.text,
-    marginBottom: 4,
-    textAlign: "right",
-  },
-  panelInput: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginBottom: 10,
-    backgroundColor: colors.white,
-  },
-  panelInputDisabled: {
-    backgroundColor: colors.toggleBg,
-    color: colors.subText,
-  },
-  saveBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    paddingVertical: 10,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  saveBtnDisabled: {
-    opacity: 0.7,
-  },
-  saveBtnText: {
-    color: colors.white,
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  profileMsg: {
-    fontSize: 12,
-    marginTop: 8,
-    textAlign: "center",
-  },
-  profileMsgSuccess: {
-    color: colors.primary,
-    fontWeight: "600",
-  },
-  profileMsgError: {
-    color: colors.error,
-  },
-  recentItem: {
-    padding: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#edf2f5",
-    backgroundColor: colors.card,
-    marginBottom: 6,
-  },
-  recentType: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.primary,
-    textTransform: "uppercase",
-    textAlign: "right",
-  },
-  recentValue: {
-    fontSize: 12,
-    color: colors.text,
-    textAlign: "right",
-    marginTop: 2,
-  },
-  recentTime: {
-    fontSize: 11,
-    color: colors.subText,
-    textAlign: "right",
-    marginTop: 2,
-  },
-  emptyText: {
-    fontSize: 13,
-    color: colors.subText,
-    textAlign: "center",
-  },
-  logoutBtn: {
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  logoutBtnText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: colors.error,
-  },
-});
+const createStyles = (colors) =>
+  StyleSheet.create({
+    safeArea: {
+      backgroundColor: colors.background,
+      overflow: "visible",
+      zIndex: 10,
+      marginBottom: 4,
+    },
+    bar: {
+      flexDirection: "row",
+      direction: "ltr",
+      paddingHorizontal: 14,
+      paddingTop: 6,
+      paddingBottom: 6,
+      minHeight: 52,
+      alignItems: "flex-end",
+      justifyContent: "space-between",
+    },
+    sideLeft: {
+      flexShrink: 1,
+      maxWidth: "58%",
+      zIndex: 4,
+      alignItems: "flex-start",
+      justifyContent: "flex-end",
+      paddingBottom: 0,
+    },
+    logoTap: {
+      marginTop: 6,
+    },
+    brandLogoBar: {
+      height: 54,
+      width: 188,
+      backgroundColor: "transparent",
+    },
+    sideRight: {
+      flexDirection: "row",
+      alignItems: "flex-end",
+      gap: 8,
+      flexShrink: 1,
+      maxWidth: "44%",
+      zIndex: 4,
+      paddingBottom: 2,
+    },
+    avatar: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      backgroundColor: colors.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarText: { color: colors.white, fontSize: 15, fontWeight: "700" },
+    userText: { flexShrink: 1, alignItems: "flex-end" },
+    greeting: {
+      fontSize: 11,
+      fontWeight: "600",
+      color: colors.subText,
+      ...textStart,
+      marginBottom: 0,
+      lineHeight: 14,
+    },
+    userName: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.text,
+      ...textStart,
+      lineHeight: 20,
+      marginTop: 1,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.4)",
+      justifyContent: "flex-start",
+      alignItems: "flex-start",
+      paddingTop: 56,
+      paddingHorizontal: 14,
+    },
+    menuCard: {
+      backgroundColor: colors.card,
+      borderRadius: 16,
+      width: 300,
+      maxHeight: 420,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.border,
+      shadowColor: "#000",
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
+      elevation: 8,
+    },
+    menuHeader: {
+      ...row,
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 16,
+      paddingTop: 14,
+      paddingBottom: 8,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    menuTitle: { fontSize: 17, fontWeight: "800", color: colors.text, ...textStart },
+    menuScroll: { maxHeight: 360 },
+    menuSection: {
+      padding: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    menuLinkBtn: {
+      ...row,
+      alignItems: "center",
+      gap: 10,
+      paddingVertical: 12,
+    },
+    menuLinkText: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+      ...textStart,
+    },
+    themeRow: {
+      ...row,
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: 4,
+    },
+    themeLabel: {
+      fontSize: 15,
+      fontWeight: "600",
+      color: colors.text,
+      ...textStart,
+    },
+    expandBtn: { ...row, justifyContent: "space-between", alignItems: "center", paddingVertical: 12 },
+    expandBtnText: { fontSize: 15, fontWeight: "600", color: colors.text, ...textStart },
+    panelContent: { marginTop: 4, paddingTop: 8 },
+    panelLabel: { fontSize: 12, fontWeight: "500", color: colors.subText, marginBottom: 4, ...textStart },
+    panelInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      marginBottom: 10,
+      backgroundColor: colors.inputBg,
+      color: colors.text,
+      fontSize: 15,
+    },
+    panelInputDisabled: { backgroundColor: colors.toggleBg, color: colors.subText },
+    saveBtn: {
+      backgroundColor: colors.primary,
+      borderRadius: 999,
+      paddingVertical: 12,
+      alignItems: "center",
+      marginTop: 4,
+    },
+    saveBtnDisabled: { opacity: 0.7 },
+    saveBtnText: { color: colors.white, fontSize: 14, fontWeight: "600" },
+    profileMsg: { fontSize: 12, marginTop: 8, textAlign: "center" },
+    profileMsgSuccess: { color: colors.primary, fontWeight: "600" },
+    profileMsgError: { color: colors.error },
+    logoutBtn: { paddingVertical: 12, alignItems: "center" },
+    logoutBtnText: { fontSize: 15, fontWeight: "600", color: colors.error },
+  });

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "QR Code Creator",
+    "name": "דינמיקר",
     "slug": "qr-code-creator-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -21,10 +21,19 @@
         {
           "photosPermission": "האפליקציה צריכה גישה לתמונות כדי לבחור לוגו ל-QR."
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "האפליקציה צריכה גישה לגלריה כדי לשמור קודי QR.",
+          "savePhotosPermission": "האפליקציה צריכה גישה לגלריה כדי לשמור קודי QR.",
+          "granularPermissions": ["photo"]
+        }
       ]
     ],
     "android": {
-      "package": "com.qrcodecreator.mobile"
+      "package": "com.qrcodecreator.mobile",
+      "supportsRtl": true
     }
   }
 }
