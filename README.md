@@ -9,7 +9,7 @@
 ## תצוגת המערכת — אתר
 
 <p align="center">
-  <img src="frontend/src/assets/Screenshot1.png" alt="צילום מסך של דינמיקר — אתר" width="920" />
+  <img src="frontend/src/assets/Screenshot1.png" alt="צילום מסך של דינמיקר — אתר" width="480" />
 </p>
 
 ---
@@ -21,7 +21,7 @@
 ### צילומי מסך
 
 <p align="center">
-<img src="mobile/assets/images/screenshots/screenshot-1.png" alt="דינמיקר — יצירת QR" width="240"/><img src="mobile/assets/images/screenshots/screenshot-2.png" alt="דינמיקר — קודים שמורים" width="240"/>
+<img src="mobile/assets/images/screenshots/screenshot-1.png" alt="דינמיקר — יצירת QR" width="240"/><img src="mobile/assets/images/screenshots/screenshot-2.png" alt="דינמיקר — קודים שמורים" width="240" style="margin-left: 40px;"/>
 </p>
 
 ### יכולות באפליקציה
