@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const folderEntrySchema = new mongoose.Schema(
   {
@@ -25,7 +25,7 @@ const dashboardFolderStateSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-module.exports = mongoose.model(
+export default mongoose.model(
   "DashboardFolderState",
   dashboardFolderStateSchema,
 );

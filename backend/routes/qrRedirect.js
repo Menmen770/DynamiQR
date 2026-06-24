@@ -1,11 +1,12 @@
-const express = require("express");
-const SavedQr = require("../models/SavedQr");
-const { buildEncodedQrText } = require("../utils/buildEncodedQrText");
-const {
+import express from "express";
+import SavedQr from "../models/SavedQr.js";
+import { qrRedirectLimiter } from "../middleware/rateLimiters.js";
+import { buildEncodedQrText } from "../utils/buildEncodedQrText.js";
+import {
   resolveTargetFromSavedDoc,
   isValidSlug,
   normalizeSlugParam,
-} = require("../utils/dynamicQr");
+} from "../utils/dynamicQr.js";
 
 const router = express.Router();
 const COUNTRY_HEADER_KEYS = [
@@ -85,7 +86,7 @@ function inferCountryCode(req) {
   return "UN";
 }
 
-router.get("/r/:slug", async (req, res) => {
+router.get("/r/:slug", qrRedirectLimiter, async (req, res) => {
   const slugNorm = normalizeSlugParam(req.params.slug);
   if (!isValidSlug(slugNorm)) {
     return res.status(404).type("text/plain").send("Not found");
@@ -143,4 +144,4 @@ router.get("/r/:slug", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

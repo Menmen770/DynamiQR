@@ -1,7 +1,7 @@
-const session = require("express-session");
-const MongoStore = require("connect-mongo");
+import session from "express-session";
+import MongoStore from "connect-mongo";
 
-function createSessionMiddleware() {
+export function createSessionMiddleware() {
   let sessionStore;
   if (process.env.MONGO_URI) {
     sessionStore = MongoStore.create({
@@ -26,5 +26,3 @@ function createSessionMiddleware() {
     store: sessionStore,
   });
 }
-
-module.exports = { createSessionMiddleware };

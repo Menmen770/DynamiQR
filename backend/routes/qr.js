@@ -1,9 +1,10 @@
-const express = require("express");
-const { generateQrDataUrl } = require("../services/qrGenerator");
+import express from "express";
+import { generateQrDataUrl } from "../services/qrGenerator.js";
+import { qrGenerateLimiter } from "../middleware/rateLimiters.js";
 
 const router = express.Router();
 
-router.post("/generate-qr", async (req, res) => {
+router.post("/generate-qr", qrGenerateLimiter, async (req, res) => {
   try {
     const qrImage = await generateQrDataUrl(req.body);
     res.json({ qrImage });
@@ -16,4 +17,4 @@ router.post("/generate-qr", async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

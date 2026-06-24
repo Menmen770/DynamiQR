@@ -1,7 +1,6 @@
-require("dotenv").config();
-
-const { connectMongoDB } = require("./mongodb/mongodb");
-const { createApp } = require("./app");
+import "dotenv/config";
+import { connectMongoDB } from "./mongodb/mongodb.js";
+import { createApp } from "./app.js";
 
 const PORT = process.env.PORT || 5000;
 

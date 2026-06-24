@@ -1,14 +1,14 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const SavedQr = require("../models/SavedQr");
-const { requireAuth } = require("../middleware/requireAuth");
-const {
+import express from "express";
+import mongoose from "mongoose";
+import SavedQr from "../models/SavedQr.js";
+import { requireAuth } from "../middleware/requireAuth.js";
+import {
   normalizeTargetUrl,
   normalizeRedirectTarget,
   resolveTargetFromSavedDoc,
   randomSlug,
-} = require("../utils/dynamicQr");
-const { buildEncodedQrText } = require("../utils/buildEncodedQrText");
+} from "../utils/dynamicQr.js";
+import { buildEncodedQrText } from "../utils/buildEncodedQrText.js";
 
 const router = express.Router();
 
@@ -578,4 +578,4 @@ router.delete("/saved-qrs/:id", requireAuth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

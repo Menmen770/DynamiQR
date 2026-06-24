@@ -1,15 +1,16 @@
-const express = require("express");
-const cors = require("cors");
-const passport = require("passport");
-const { createSessionMiddleware } = require("./middleware/session");
-const { registerPassportStrategies } = require("./config/passport");
-const qrRedirectRoutes = require("./routes/qrRedirect");
-const qrRoutes = require("./routes/qr");
-const authRoutes = require("./routes/auth");
-const savedQrRoutes = require("./routes/savedQr");
-const dashboardFolderRoutes = require("./routes/dashboardFolders");
+import express from "express";
+import cors from "cors";
+import passport from "passport";
+import { createSessionMiddleware } from "./middleware/session.js";
+import { apiLimiter } from "./middleware/rateLimiters.js";
+import { registerPassportStrategies } from "./config/passport.js";
+import qrRedirectRoutes from "./routes/qrRedirect.js";
+import qrRoutes from "./routes/qr.js";
+import authRoutes from "./routes/auth.js";
+import savedQrRoutes from "./routes/savedQr.js";
+import dashboardFolderRoutes from "./routes/dashboardFolders.js";
 
-function createApp() {
+export function createApp() {
   const app = express();
 
   // Render/Reverse proxy: required so secure cookies from express-session are set correctly in production.
@@ -23,7 +24,7 @@ function createApp() {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: "1mb" }));
+  app.use(express.json({ limit: "5mb" }));
   app.use(createSessionMiddleware());
   app.use(passport.initialize());
 
@@ -33,6 +34,7 @@ function createApp() {
     res.send("The QR Server is UP and running! 🚀");
   });
 
+  app.use("/api", apiLimiter);
   app.use("/api", qrRedirectRoutes);
   app.use("/api", qrRoutes);
   app.use("/api", authRoutes);
@@ -41,5 +43,3 @@ function createApp() {
 
   return app;
 }
-
-module.exports = { createApp };

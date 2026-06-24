@@ -1,9 +1,9 @@
-const crypto = require("crypto");
-const { buildEncodedQrText } = require("./buildEncodedQrText");
+import crypto from "crypto";
+import { buildEncodedQrText } from "./buildEncodedQrText.js";
 
-const MAX_TARGET_URL = 2048;
+export const MAX_TARGET_URL = 2048;
 
-function normalizeTargetUrl(raw) {
+export function normalizeTargetUrl(raw) {
   const s = String(raw || "").trim();
   if (!s || s.length > MAX_TARGET_URL) return null;
   try {
@@ -16,7 +16,7 @@ function normalizeTargetUrl(raw) {
 }
 
 /** יעד חוקי ל־HTTP Location (דפדפנים רבים תומכים גם ב־mailto / tel / sms). */
-function normalizeRedirectTarget(raw) {
+export function normalizeRedirectTarget(raw) {
   const s = String(raw || "").trim();
   if (!s || s.length > MAX_TARGET_URL) return null;
   try {
@@ -37,7 +37,7 @@ function normalizeRedirectTarget(raw) {
   }
 }
 
-function resolveTargetFromSavedDoc(doc) {
+export function resolveTargetFromSavedDoc(doc) {
   const ex = String(doc?.dynamicTargetUrl || "").trim();
   if (ex) {
     const http = normalizeTargetUrl(ex);
@@ -51,24 +51,14 @@ function resolveTargetFromSavedDoc(doc) {
   return normalizeRedirectTarget(built);
 }
 
-function randomSlug() {
+export function randomSlug() {
   return crypto.randomBytes(8).toString("hex");
 }
 
-function isValidSlug(s) {
+export function isValidSlug(s) {
   return typeof s === "string" && /^[a-f0-9]{16}$/i.test(String(s).trim());
 }
 
-function normalizeSlugParam(s) {
+export function normalizeSlugParam(s) {
   return String(s || "").trim().toLowerCase();
 }
-
-module.exports = {
-  normalizeTargetUrl,
-  normalizeRedirectTarget,
-  resolveTargetFromSavedDoc,
-  randomSlug,
-  isValidSlug,
-  normalizeSlugParam,
-  MAX_TARGET_URL,
-};

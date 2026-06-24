@@ -1,7 +1,7 @@
 /**
  * מקביל ל־frontend/src/utils/qrEncodedText.js — לחישוב יעד דינמי בשרת.
  */
-function buildEncodedQrText(type, inputs) {
+export function buildEncodedQrText(type, inputs) {
   const safe = inputs && typeof inputs === "object" ? inputs : {};
   const t = type || "url";
 
@@ -62,5 +62,3 @@ function buildEncodedQrText(type, inputs) {
       return String(safe.url || "").trim();
   }
 }
-
-module.exports = { buildEncodedQrText };

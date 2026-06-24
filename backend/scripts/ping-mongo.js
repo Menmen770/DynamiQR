@@ -2,8 +2,8 @@
  * בדיקת חיבור: node scripts/ping-mongo.js (מריצים מתוך תיקיית backend)
  * דורש MONGO_URI ב-.env (מקומי או mongodb+srv מ-Atlas)
  */
-require("dotenv").config();
-const mongoose = require("mongoose");
+import "dotenv/config";
+import mongoose from "mongoose";
 
 const uri = process.env.MONGO_URI;
 if (!uri) {

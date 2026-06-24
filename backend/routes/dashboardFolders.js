@@ -1,6 +1,6 @@
-const express = require("express");
-const DashboardFolderState = require("../models/DashboardFolderState");
-const { requireAuth } = require("../middleware/requireAuth");
+import express from "express";
+import DashboardFolderState from "../models/DashboardFolderState.js";
+import { requireAuth } from "../middleware/requireAuth.js";
 
 const router = express.Router();
 
@@ -153,4 +153,4 @@ router.put("/dashboard/folders", requireAuth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,6 +1,6 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
-const connectMongoDB = async () => {
+export async function connectMongoDB() {
   const { MONGO_URI } = process.env;
 
   if (!MONGO_URI) {
@@ -35,8 +35,4 @@ const connectMongoDB = async () => {
   } catch (error) {
     console.error("MongoDB connection error:", error.message);
   }
-};
-
-module.exports = {
-  connectMongoDB,
-};
+}

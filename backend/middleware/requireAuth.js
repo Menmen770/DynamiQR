@@ -1,6 +1,6 @@
-const { getUserIdFromRequest } = require("../utils/authToken");
+import { getUserIdFromRequest } from "../utils/authToken.js";
 
-function requireAuth(req, res, next) {
+export function requireAuth(req, res, next) {
   const userId = getUserIdFromRequest(req);
   if (!userId) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -8,5 +8,3 @@ function requireAuth(req, res, next) {
   req.userId = userId;
   next();
 }
-
-module.exports = { requireAuth };

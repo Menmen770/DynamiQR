@@ -1,15 +1,22 @@
-const express = require("express");
-const passport = require("passport");
-const bcrypt = require("bcryptjs");
-const User = require("../models/User");
-const { requireAuth } = require("../middleware/requireAuth");
-const { FRONTEND_URL } = require("../config/env");
-const {
+import express from "express";
+import passport from "passport";
+import bcrypt from "bcryptjs";
+import User from "../models/User.js";
+import { requireAuth } from "../middleware/requireAuth.js";
+import { authLimiter } from "../middleware/rateLimiters.js";
+import { FRONTEND_URL } from "../config/env.js";
+import {
   signAccessToken,
   getUserIdFromRequest,
-} = require("../utils/authToken");
+} from "../utils/authToken.js";
 
 const router = express.Router();
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function isValidEmail(email) {
+  return typeof email === "string" && EMAIL_RE.test(email.trim());
+}
 
 function redirectFrontendWithToken(res, userId) {
   const token = signAccessToken(String(userId));
@@ -23,11 +30,14 @@ function redirectFrontendWithToken(res, userId) {
   }
 }
 
-router.post("/auth/register", async (req, res) => {
+router.post("/auth/register", authLimiter, async (req, res) => {
   const { fullName, email, password } = req.body;
 
   if (!fullName || !email || !password) {
     return res.status(400).json({ error: "All fields are required" });
+  }
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: "אימייל לא תקין" });
   }
 
   try {
@@ -59,11 +69,14 @@ router.post("/auth/register", async (req, res) => {
   }
 });
 
-router.post("/auth/login", async (req, res) => {
+router.post("/auth/login", authLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
+  }
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: "אימייל לא תקין" });
   }
 
   try {
@@ -156,7 +169,7 @@ router.put("/auth/profile", requireAuth, async (req, res) => {
   }
 });
 
-router.put("/auth/password", requireAuth, async (req, res) => {
+router.put("/auth/password", authLimiter, requireAuth, async (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (
     typeof currentPassword !== "string" ||
@@ -238,4 +251,4 @@ router.get(
   },
 );
 
-module.exports = router;
+export default router;

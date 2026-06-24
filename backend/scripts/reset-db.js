@@ -4,8 +4,8 @@
  *   PowerShell: $env:RESET_DB_YES='1'; node scripts/reset-db.js
  *   bash:       RESET_DB_YES=1 node scripts/reset-db.js
  */
-require("dotenv").config();
-const mongoose = require("mongoose");
+import "dotenv/config";
+import mongoose from "mongoose";
 
 const uri = process.env.MONGO_URI;
 const confirmed =

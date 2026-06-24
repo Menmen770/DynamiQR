@@ -1,8 +1,8 @@
-const passport = require("passport");
-const GoogleStrategy = require("passport-google-oauth20").Strategy;
-const FacebookStrategy = require("passport-facebook").Strategy;
-const User = require("../models/User");
-const { BACKEND_URL } = require("./env");
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Strategy as FacebookStrategy } from "passport-facebook";
+import User from "../models/User.js";
+import { BACKEND_URL } from "./env.js";
 
 const oauthCallback = (provider) => async (accessToken, refreshToken, profile, done) => {
   try {
@@ -35,7 +35,7 @@ const oauthCallback = (provider) => async (accessToken, refreshToken, profile, d
   }
 };
 
-function registerPassportStrategies() {
+export function registerPassportStrategies() {
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     passport.use(
       new GoogleStrategy(
@@ -63,5 +63,3 @@ function registerPassportStrategies() {
     );
   }
 }
-
-module.exports = { registerPassportStrategies };

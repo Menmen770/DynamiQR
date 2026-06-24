@@ -1,8 +1,10 @@
-const {
-  QRCodeStyling,
-} = require("qr-code-styling/lib/qr-code-styling.common.js");
-const nodeCanvas = require("canvas");
-const { JSDOM } = require("jsdom");
+import { QRCodeStyling } from "qr-code-styling/lib/qr-code-styling.common.js";
+import nodeCanvas from "canvas";
+import { JSDOM } from "jsdom";
+import {
+  isSvgDataUrl,
+  rasterizeSvgDataUrlToPng,
+} from "../utils/rasterizeSvgDataUrl.js";
 
 function clamp01(value) {
   const num = Number(value);
@@ -154,10 +156,10 @@ async function addLogoWithCutout(
       logoSize,
     );
   } catch (logoError) {
-    console.warn(
-      "Logo image load failed, keeping QR without logo:",
-      logoError.message,
-    );
+    const err = new Error("לא ניתן לטעון את הלוגו לתוך ה-QR");
+    err.statusCode = 400;
+    err.cause = logoError;
+    throw err;
   }
 
   return canvas.toBuffer("image/png");
@@ -210,9 +212,14 @@ async function generateQrDataUrl(body) {
     backgroundOptions.gradient = bgGradient;
   }
 
+  const size = Math.min(
+    1200,
+    Math.max(200, Math.round(Number(body.width) || 400)),
+  );
+
   const options = {
-    width: 400,
-    height: 400,
+    width: size,
+    height: size,
     type: "png",
     data: text,
     margin: 10,
@@ -240,9 +247,15 @@ async function generateQrDataUrl(body) {
   let finalBuffer = qrBuffer;
 
   if (image) {
+    let imageForLogo = image;
+    if (isSvgDataUrl(image)) {
+      imageForLogo = await rasterizeSvgDataUrlToPng(image, {
+        insetScale: logoInsetScale,
+      });
+    }
     finalBuffer = await addLogoWithCutout(
       qrBuffer,
-      image,
+      imageForLogo,
       logoShape,
       logoInsetScale,
     );
@@ -254,7 +267,7 @@ async function generateQrDataUrl(body) {
   return `data:image/png;base64,${base64}`;
 }
 
-module.exports = {
+export {
   addLogoWithCutout,
   applyCutoutOnly,
   generateQrDataUrl,

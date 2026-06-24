@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const styleSchema = new mongoose.Schema(
   {
@@ -69,4 +69,4 @@ savedQrSchema.index(
   { unique: true, sparse: true },
 );
 
-module.exports = mongoose.model("SavedQr", savedQrSchema);
+export default mongoose.model("SavedQr", savedQrSchema);

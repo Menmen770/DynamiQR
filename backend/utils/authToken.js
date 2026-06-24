@@ -1,4 +1,4 @@
-const jwt = require("jsonwebtoken");
+import jwt from "jsonwebtoken";
 
 function getJwtSecret() {
   return (
@@ -8,7 +8,7 @@ function getJwtSecret() {
   );
 }
 
-function signAccessToken(userId) {
+export function signAccessToken(userId) {
   return jwt.sign({ sub: String(userId) }, getJwtSecret(), {
     expiresIn: "30d",
   });
@@ -17,7 +17,7 @@ function signAccessToken(userId) {
 /**
  * @returns {string|null} Mongo user id string
  */
-function verifyAccessToken(token) {
+export function verifyAccessToken(token) {
   if (!token || typeof token !== "string") return null;
   try {
     const payload = jwt.verify(token.trim(), getJwtSecret());
@@ -32,7 +32,7 @@ function verifyAccessToken(token) {
  * Session cookie (אתר) או Bearer JWT (אפליקציה).
  * @returns {string|null}
  */
-function getUserIdFromRequest(req) {
+export function getUserIdFromRequest(req) {
   if (req.session && req.session.userId) {
     return req.session.userId;
   }
@@ -42,9 +42,3 @@ function getUserIdFromRequest(req) {
   }
   return null;
 }
-
-module.exports = {
-  signAccessToken,
-  verifyAccessToken,
-  getUserIdFromRequest,
-};
