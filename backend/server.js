@@ -11,17 +11,13 @@ const PORT = process.env.PORT || 5000;
 async function start() {
   await connectMongoDB();
 
-  if (!isEmailConfigured()) {
-    console.warn(
-      "[mailer] ⚠ SMTP_USER / SMTP_PASS חסרים ב-.env — מיילי אימות לא יישלחו (קוד בקונסול בלבד)",
-    );
-  } else {
+  if (isEmailConfigured()) {
     const smtpCheck = await verifySmtpConnection();
     if (smtpCheck.ok) {
-      console.log("[mailer] ✓ SMTP מחובר — מיילי אימות פעילים");
+      console.log("Email service ready");
     } else {
       console.warn(
-        "[mailer] ⚠ SMTP מוגדר אך החיבור נכשל:",
+        "Email service unavailable:",
         smtpCheck.error || smtpCheck.reason,
       );
     }

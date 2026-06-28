@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import QrLinkModeToggleMobile from "./QrLinkModeToggleMobile";
 
 function Field({ label, hint, children, colors, styles }) {
   return (
@@ -16,8 +17,25 @@ export default function QrContentStepMobile({
   qrType,
   qrInputs,
   onInputChange,
+  linkMode,
+  onLinkModeChange,
 }) {
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const linkModeToggle = onLinkModeChange ? (
+    <QrLinkModeToggleMobile
+      linkMode={linkMode}
+      onChange={onLinkModeChange}
+      compact={qrType === "url" || qrType === "pdf"}
+    />
+  ) : null;
+
+  const withLinkMode = (fields) => (
+    <>
+      {fields}
+      {linkModeToggle}
+    </>
+  );
 
   const inputProps = {
     style: styles.input,
@@ -27,36 +45,42 @@ export default function QrContentStepMobile({
 
   if (qrType === "url") {
     return (
-      <Field label="כתובת (URL)" hint="הקישור שיפתח בסריקה" colors={colors} styles={styles}>
-        <TextInput
-          {...inputProps}
-          value={qrInputs.url}
-          onChangeText={(t) => onInputChange("url", t)}
-          placeholder="https://example.com"
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-      </Field>
+      <>
+        <Field label="כתובת (URL)" hint="הקישור שיפתח בסריקה" colors={colors} styles={styles}>
+          <TextInput
+            {...inputProps}
+            value={qrInputs.url}
+            onChangeText={(t) => onInputChange("url", t)}
+            placeholder="https://example.com"
+            autoCapitalize="none"
+            keyboardType="url"
+          />
+        </Field>
+        {linkModeToggle}
+      </>
     );
   }
 
   if (qrType === "pdf") {
     return (
-      <Field label="קישור ל-PDF" hint="הדבק URL של קובץ PDF" colors={colors} styles={styles}>
-        <TextInput
-          {...inputProps}
-          value={qrInputs.pdf}
-          onChangeText={(t) => onInputChange("pdf", t)}
-          placeholder="https://example.com/document.pdf"
-          autoCapitalize="none"
-          keyboardType="url"
-        />
-      </Field>
+      <>
+        <Field label="קישור ל-PDF" hint="הדבק URL של קובץ PDF" colors={colors} styles={styles}>
+          <TextInput
+            {...inputProps}
+            value={qrInputs.pdf}
+            onChangeText={(t) => onInputChange("pdf", t)}
+            placeholder="https://example.com/document.pdf"
+            autoCapitalize="none"
+            keyboardType="url"
+          />
+        </Field>
+        {linkModeToggle}
+      </>
     );
   }
 
   if (qrType === "whatsapp") {
-    return (
+    return withLinkMode(
       <>
         <Field label="מספר טלפון" colors={colors} styles={styles}>
           <TextInput
@@ -76,12 +100,12 @@ export default function QrContentStepMobile({
             multiline
           />
         </Field>
-      </>
+      </>,
     );
   }
 
   if (qrType === "email") {
-    return (
+    return withLinkMode(
       <>
         <Field label="כתובת אימייל" colors={colors} styles={styles}>
           <TextInput
@@ -110,12 +134,12 @@ export default function QrContentStepMobile({
             multiline
           />
         </Field>
-      </>
+      </>,
     );
   }
 
   if (qrType === "phone") {
-    return (
+    return withLinkMode(
       <Field label="מספר טלפון" hint="חיוג ישיר בסריקה" colors={colors} styles={styles}>
         <TextInput
           {...inputProps}
@@ -124,12 +148,12 @@ export default function QrContentStepMobile({
           placeholder="+972 50 123 4567"
           keyboardType="phone-pad"
         />
-      </Field>
+      </Field>,
     );
   }
 
   if (qrType === "sms") {
-    return (
+    return withLinkMode(
       <>
         <Field label="מספר טלפון" colors={colors} styles={styles}>
           <TextInput
@@ -149,12 +173,12 @@ export default function QrContentStepMobile({
             multiline
           />
         </Field>
-      </>
+      </>,
     );
   }
 
   if (qrType === "wifi") {
-    return (
+    return withLinkMode(
       <>
         <Field label="שם הרשת (SSID)" colors={colors} styles={styles}>
           <TextInput
@@ -199,12 +223,12 @@ export default function QrContentStepMobile({
             ))}
           </View>
         </Field>
-      </>
+      </>,
     );
   }
 
   if (qrType === "contact") {
-    return (
+    return withLinkMode(
       <>
         <Field label="שם מלא" colors={colors} styles={styles}>
           <TextInput
@@ -233,7 +257,7 @@ export default function QrContentStepMobile({
             autoCapitalize="none"
           />
         </Field>
-      </>
+      </>,
     );
   }
 
@@ -248,7 +272,7 @@ export default function QrContentStepMobile({
 
   const social = socialMap[qrType];
   if (social) {
-    return (
+    return withLinkMode(
       <Field label={social.label} hint={social.hint} colors={colors} styles={styles}>
         <TextInput
           {...inputProps}
@@ -257,7 +281,7 @@ export default function QrContentStepMobile({
           placeholder="username"
           autoCapitalize="none"
         />
-      </Field>
+      </Field>,
     );
   }
 

@@ -38,7 +38,7 @@ export function createApp() {
   registerPassportStrategies();
 
   app.get("/", (req, res) => {
-    res.send("The QR Server is UP and running! 🚀");
+    res.send("The QR Server is UP and running!");
   });
 
   app.get("/email-assets/logo.png", async (req, res) => {

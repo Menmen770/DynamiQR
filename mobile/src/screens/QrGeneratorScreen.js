@@ -85,6 +85,8 @@ export default function QrGeneratorScreen() {
     saveQrMessage,
     exportQr,
     exporting,
+    linkMode,
+    handleLinkModeChange,
   } = qr;
 
   const previewProps = {
@@ -187,6 +189,8 @@ export default function QrGeneratorScreen() {
                   qrType={qrType}
                   qrInputs={qrInputs}
                   onInputChange={handleInputChange}
+                  linkMode={linkMode}
+                  onLinkModeChange={handleLinkModeChange}
                 />
               </View>
 

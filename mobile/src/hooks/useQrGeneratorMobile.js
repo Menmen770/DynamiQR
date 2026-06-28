@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -9,6 +9,7 @@ import { captureQrPreviewToFile } from "../utils/qrExportCaptureMobile";
 import {
   apiFetchWithTimeout,
   getApiBaseUrl,
+  getDynamicQrRedirectBase,
   parseJsonResponse,
 } from "../utils/api";
 import { svgModuleToDataUrl } from "../utils/svgDataUrlFromModule";
@@ -65,11 +66,37 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
   const [saveQrSaving, setSaveQrSaving] = useState(false);
   const [saveQrMessage, setSaveQrMessage] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [linkMode, setLinkMode] = useState("static");
+  const [publicSlug, setPublicSlug] = useState(null);
 
   const requestIdRef = useRef(0);
   const appliedInitialRef = useRef(false);
 
-  const encodedText = buildEncodedQrText(qrType, qrInputs);
+  const encodedText = useMemo(
+    () => buildEncodedQrText(qrType, qrInputs),
+    [qrType, qrInputs],
+  );
+
+  const qrTextForEncode = useMemo(() => {
+    if (linkMode === "dynamic" && publicSlug) {
+      const base = getDynamicQrRedirectBase().replace(/\/$/, "");
+      const slug = String(publicSlug).trim().toLowerCase();
+      return `${base}/api/r/${slug}`;
+    }
+    const raw = String(encodedText || "").trim();
+    if (linkMode === "dynamic" && !publicSlug && raw) {
+      try {
+        const u = new URL(raw);
+        if (!u.hash || u.hash === "#") {
+          u.hash = "qrd";
+          return u.toString();
+        }
+      } catch {
+        /* לא URL מלא */
+      }
+    }
+    return raw;
+  }, [linkMode, publicSlug, encodedText]);
 
   const handleInputChange = useCallback((path, value) => {
     setQrInputs((prev) => setNestedInput(prev, path, value));
@@ -77,24 +104,54 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
   }, []);
 
   const handleQRTypeChange = useCallback((type) => {
+    setLinkMode("static");
+    setPublicSlug(null);
     setQrType(type);
     setError("");
+  }, []);
+
+  const handleLinkModeChange = useCallback((mode) => {
+    const m = mode === "dynamic" ? "dynamic" : "static";
+    setLinkMode(m);
+    if (m === "static") {
+      setPublicSlug(null);
+    }
   }, []);
 
   useEffect(() => {
     if (!initialPayload || appliedInitialRef.current) return;
     appliedInitialRef.current = true;
     if (initialPayload.qrType) setQrType(initialPayload.qrType);
+    if (initialPayload.linkMode === "dynamic") {
+      setLinkMode("dynamic");
+      setPublicSlug(initialPayload.publicSlug || null);
+    } else if (initialPayload.linkMode === "static") {
+      setLinkMode("static");
+      setPublicSlug(null);
+    }
     if (initialPayload.qrInputs) {
-      setQrInputs((prev) => ({
-        ...prev,
-        ...initialPayload.qrInputs,
-        whatsapp: { ...prev.whatsapp, ...initialPayload.qrInputs.whatsapp },
-        email: { ...prev.email, ...initialPayload.qrInputs.email },
-        sms: { ...prev.sms, ...initialPayload.qrInputs.sms },
-        wifi: { ...prev.wifi, ...initialPayload.qrInputs.wifi },
-        contact: { ...prev.contact, ...initialPayload.qrInputs.contact },
-      }));
+      setQrInputs((prev) => {
+        const merged = {
+          ...prev,
+          ...initialPayload.qrInputs,
+          whatsapp: { ...prev.whatsapp, ...initialPayload.qrInputs.whatsapp },
+          email: { ...prev.email, ...initialPayload.qrInputs.email },
+          sms: { ...prev.sms, ...initialPayload.qrInputs.sms },
+          wifi: { ...prev.wifi, ...initialPayload.qrInputs.wifi },
+          contact: { ...prev.contact, ...initialPayload.qrInputs.contact },
+        };
+        if (
+          initialPayload.linkMode === "dynamic" &&
+          String(initialPayload.dynamicTargetUrl || "").trim()
+        ) {
+          const target = String(initialPayload.dynamicTargetUrl).trim();
+          if (initialPayload.qrType === "pdf") {
+            return { ...merged, pdf: target };
+          }
+          return { ...merged, url: target };
+        }
+        return merged;
+      });
     } else if (initialPayload.url) {
       setQrInputs((prev) => ({ ...prev, url: initialPayload.url }));
     }
@@ -129,7 +186,7 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
   }, [saveQrMessage]);
 
   const generateQr = useCallback(async () => {
-    const text = String(encodedText || "").trim();
+    const text = String(qrTextForEncode || "").trim();
     if (!text) {
       setQrImage(null);
       setError("");
@@ -235,7 +292,7 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
       }
     }
   }, [
-    encodedText,
+    qrTextForEncode,
     qrType,
     fgColor,
     qrColorMode,
@@ -292,7 +349,7 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
       qrType,
       qrInputs,
       qrValue: encodedText,
-      linkMode: "static",
+      linkMode: linkMode === "dynamic" ? "dynamic" : "static",
       style: {
         fgColor,
         qrColorMode,
@@ -314,6 +371,7 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
       qrType,
       qrInputs,
       encodedText,
+      linkMode,
       fgColor,
       qrColorMode,
       dotsGradient,
@@ -335,6 +393,20 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
       if (!qrImage) {
         setSaveQrMessage("צור QR לפני שמירה");
         return false;
+      }
+      if (linkMode === "dynamic" && !publicSlug) {
+        const built = String(encodedText || "").trim();
+        if (!built) {
+          setSaveQrMessage("נא למלא את פרטי הקוד לפני שמירה במצב דינמי");
+          return false;
+        }
+        if (qrType === "url") {
+          const u = String(qrInputs?.url || "").trim();
+          if (!/^https?:\/\//i.test(u)) {
+            setSaveQrMessage("לקישור דינמי נדרש כתובת http או https תקינה");
+            return false;
+          }
+        }
       }
       const name = String(displayName || "").trim();
       if (!name) {
@@ -358,7 +430,14 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
         if (!response.ok) {
           throw new Error(data?.error || "שמירה נכשלה");
         }
-        setSaveQrMessage("נשמר בהצלחה לאוסף שלך");
+        const saved = data?.saved;
+        if (saved?.linkMode === "dynamic" && saved?.publicSlug) {
+          setLinkMode("dynamic");
+          setPublicSlug(saved.publicSlug);
+        }
+        setSaveQrMessage(
+          data?.updated ? "עודכן באוסף" : "נשמר בהצלחה לאוסף שלך",
+        );
         return true;
       } catch (e) {
         setSaveQrMessage(e.message || "שמירה נכשלה");
@@ -367,7 +446,7 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
         setSaveQrSaving(false);
       }
     },
-    [qrImage, buildSavePayload],
+    [qrImage, buildSavePayload, linkMode, publicSlug, encodedText, qrType, qrInputs],
   );
 
   const exportQr = useCallback(async () => {
@@ -439,6 +518,9 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
     error,
     setError,
     encodedText,
+    qrTextForEncode,
+    linkMode,
+    handleLinkModeChange,
     refetchQr: generateQr,
     saveQr,
     saveQrSaving,
