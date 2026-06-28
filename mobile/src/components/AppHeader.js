@@ -123,9 +123,27 @@ export default function AppHeader() {
   return (
     <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <View style={styles.bar}>
-        <View style={styles.sideLeft}>
+        <View style={styles.sideUser}>
           <TouchableOpacity
-            style={styles.logoTap}
+            onPress={() => setMenuVisible(true)}
+            activeOpacity={0.7}
+            accessibilityLabel="הגדרות חשבון"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>{userInitial}</Text>
+            </View>
+          </TouchableOpacity>
+          <View style={styles.userText}>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.userName} numberOfLines={1}>
+              {firstName}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.sideBrand}>
+          <TouchableOpacity
             onPress={goToMyCodes}
             activeOpacity={0.85}
             accessibilityLabel="קודים שמורים"
@@ -136,25 +154,6 @@ export default function AppHeader() {
               style={styles.brandLogoBar}
               resizeMode="contain"
             />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.sideRight}>
-          <View style={styles.userText}>
-            <Text style={styles.greeting}>{greeting}</Text>
-            <Text style={styles.userName} numberOfLines={1}>
-              {firstName}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => setMenuVisible(true)}
-            activeOpacity={0.7}
-            accessibilityLabel="הגדרות חשבון"
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{userInitial}</Text>
-            </View>
           </TouchableOpacity>
         </View>
       </View>
@@ -305,37 +304,34 @@ const createStyles = (colors) =>
     bar: {
       flexDirection: "row",
       direction: "ltr",
-      paddingHorizontal: 14,
-      paddingTop: 6,
-      paddingBottom: 6,
-      minHeight: 52,
-      alignItems: "flex-end",
+      alignItems: "center",
       justifyContent: "space-between",
+      width: "100%",
+      paddingHorizontal: 24,
+      paddingVertical: 10,
+      minHeight: 56,
     },
-    sideLeft: {
+    sideUser: {
+      flexDirection: "row",
+      direction: "ltr",
+      alignItems: "center",
+      gap: 6,
       flexShrink: 1,
+      minWidth: 0,
       maxWidth: "58%",
-      zIndex: 4,
-      alignItems: "flex-start",
-      justifyContent: "flex-end",
-      paddingBottom: 0,
     },
-    logoTap: {
-      marginTop: 6,
+    sideBrand: {
+      flexShrink: 0,
+      marginLeft: 24,
+      paddingLeft: 10,
+      alignItems: "center",
+      justifyContent: "center",
     },
     brandLogoBar: {
-      height: 54,
-      width: 188,
+      height: 50,
+      width: 152,
+      maxWidth: "100%",
       backgroundColor: "transparent",
-    },
-    sideRight: {
-      flexDirection: "row",
-      alignItems: "flex-end",
-      gap: 8,
-      flexShrink: 1,
-      maxWidth: "44%",
-      zIndex: 4,
-      paddingBottom: 2,
     },
     avatar: {
       width: 34,
@@ -346,7 +342,12 @@ const createStyles = (colors) =>
       justifyContent: "center",
     },
     avatarText: { color: colors.white, fontSize: 15, fontWeight: "700" },
-    userText: { flexShrink: 1, alignItems: "flex-end" },
+    userText: {
+      flexShrink: 1,
+      minWidth: 0,
+      justifyContent: "center",
+      alignItems: "flex-start",
+    },
     greeting: {
       fontSize: 11,
       fontWeight: "600",
@@ -361,7 +362,7 @@ const createStyles = (colors) =>
       color: colors.text,
       ...textStart,
       lineHeight: 20,
-      marginTop: 1,
+      marginTop: 2,
     },
     modalOverlay: {
       flex: 1,

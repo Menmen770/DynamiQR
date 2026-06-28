@@ -163,12 +163,13 @@ router.post("/auth/login", authLimiter, async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    // Legacy accounts created before email verification may have emailVerified=false.
+    // Login is allowed; verification is required only during registration.
     if (user.emailVerified === false) {
-      return res.status(403).json({
-        error: "יש לאמת את האימייל לפני ההתחברות",
-        needsEmailVerification: true,
-        email: user.email,
-      });
+      user.emailVerified = true;
+      user.emailVerificationCodeHash = undefined;
+      user.emailVerificationExpiresAt = undefined;
+      await user.save();
     }
 
     req.session.userId = user._id.toString();

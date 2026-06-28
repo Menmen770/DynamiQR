@@ -10,14 +10,12 @@ import {
   View,
 } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { useFocusEffect, useIsFocused, useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useIsFocused } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
-  IconArrowRight,
   IconBolt,
   IconBoltOff,
   IconScan,
-  IconX,
 } from "@tabler/icons-react-native";
 import { useAccessibility } from "../context/AccessibilityContext";
 import ScreenWithAccessibility from "../components/ScreenWithAccessibility";
@@ -29,6 +27,7 @@ const isUrl = (str) => {
 
 const CORNER_SIZE = 26;
 const CORNER_THICKNESS = 4;
+const TAB_BAR_HEIGHT = 74;
 
 function ScanCorners({ color }) {
   const cornerBase = {
@@ -93,7 +92,6 @@ function ScanCorners({ color }) {
 }
 
 export default function QrScannerScreen() {
-  const navigation = useNavigation();
   const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
@@ -106,6 +104,7 @@ export default function QrScannerScreen() {
 
   const frameSize = Math.min(screenW * 0.74, 292);
   const horizontalPad = (screenW - frameSize) / 2;
+  const tabBarReserve = TAB_BAR_HEIGHT + Math.max(insets.bottom, 8);
 
   // מרכז המסגרת באזור אמצע המסך ומעט מעליו (לא נמוך מדי)
   const frameCenterY = screenH * 0.4;
@@ -138,11 +137,6 @@ export default function QrScannerScreen() {
         },
       ]);
     }
-  };
-
-  const handleClose = () => {
-    setTorchOn(false);
-    navigation.navigate("MyCodes");
   };
 
   const showCamera = isFocused && permission?.granted;
@@ -181,10 +175,6 @@ export default function QrScannerScreen() {
               <Text style={styles.permissionButtonText}>אפשר גישה</Text>
             </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.backButton} onPress={handleClose}>
-            <IconArrowRight size={18} color={colors.primary} strokeWidth={2} />
-            <Text style={styles.backButtonText}>חזרה</Text>
-          </TouchableOpacity>
         </View>
       </ScreenWithAccessibility>
     );
@@ -264,14 +254,7 @@ export default function QrScannerScreen() {
             style={[styles.topBar, { paddingTop: insets.top + 8 }]}
             pointerEvents="box-none"
           >
-            <TouchableOpacity
-              style={styles.iconButton}
-              onPress={handleClose}
-              activeOpacity={0.85}
-              accessibilityLabel="סגור סריקה"
-            >
-              <IconX size={22} color="#fff" strokeWidth={2.2} />
-            </TouchableOpacity>
+            <View style={styles.iconButtonSpacer} />
 
             <View style={styles.topTitleWrap}>
               <Text style={styles.topTitle}>סריקת QR</Text>
@@ -298,7 +281,10 @@ export default function QrScannerScreen() {
           </View>
 
           <View
-            style={[styles.bottomPanel, { paddingBottom: Math.max(insets.bottom, 20) }]}
+            style={[
+              styles.bottomPanel,
+              { bottom: tabBarReserve, paddingBottom: 12 },
+            ]}
             pointerEvents="box-none"
           >
             <Text style={styles.scanHint}>
@@ -383,17 +369,6 @@ const createStyles = (colors) =>
       color: colors.white,
       fontSize: 16,
       fontWeight: "700",
-    },
-    backButton: {
-      marginTop: 24,
-      flexDirection: "row-reverse",
-      alignItems: "center",
-      gap: 6,
-    },
-    backButtonText: {
-      fontSize: 16,
-      color: colors.primary,
-      fontWeight: "600",
     },
     cameraContainer: {
       flex: 1,

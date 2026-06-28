@@ -5,22 +5,25 @@ const BRAND_DARK = "#005f73";
 const BRAND_BG = "#f0fafa";
 
 /**
- * תבנית HTML מקצועית לקוד אימות — RTL, לוגo inline (CID), עברית.
- * @param {{ fullName?: string, code: string, expiresMinutes?: number, logoCid?: string|null }} opts
+ * תבנית HTML מקצועית לקוד אימות — RTL, לוגו למעלה (URL ציבורי או CID), עברית.
+ * @param {{ fullName?: string, code: string, expiresMinutes?: number, logoUrl?: string|null, logoCid?: string|null }} opts
  */
 export function buildVerificationEmailHtml({
   fullName = "",
   code,
   expiresMinutes = 10,
+  logoUrl = null,
   logoCid = EMAIL_LOGO_CID,
 }) {
   const greeting = fullName.trim()
     ? `שלום ${escapeHtml(fullName.trim())},`
     : "שלום,";
   const safeCode = escapeHtml(String(code));
-  const logoBlock = logoCid
-    ? `<img src="cid:${logoCid}" alt="דינמיקר" width="180" style="display:block;margin:0 auto;max-width:180px;width:180px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />`
-    : `<p style="margin:0;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:1px;">דינמיקר</p>`;
+  const logoBlock = logoUrl
+    ? `<img src="${escapeHtml(logoUrl)}" alt="דינמיקר" width="180" style="display:block;margin:0 auto;max-width:180px;width:180px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />`
+    : logoCid
+      ? `<img src="cid:${logoCid}" alt="דינמיקר" width="180" style="display:block;margin:0 auto;max-width:180px;width:180px;height:auto;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />`
+      : `<p style="margin:0;font-size:28px;font-weight:800;color:${BRAND_DARK};letter-spacing:1px;">דינמיקר</p>`;
 
   return `<!DOCTYPE html>
 <html lang="he" dir="rtl">

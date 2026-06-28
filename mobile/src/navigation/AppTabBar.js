@@ -55,11 +55,6 @@ export default function AppTabBar({ state, descriptors, navigation }) {
     () => createStyles(colors, insets.bottom),
     [colors, insets.bottom],
   );
-  const focusedRoute = state.routes[state.index];
-
-  if (focusedRoute?.name === "QrScanner") {
-    return null;
-  }
 
   return (
     <View style={styles.wrapper}>

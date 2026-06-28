@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { buildVerificationEmailHtml } from "./emailTemplates.js";
-import { getEmailLogoInlineAttachment } from "./emailLogo.js";
+import { resolveEmailLogoForSend } from "./emailLogo.js";
 
 let transport = null;
 let transportKey = "";
@@ -92,12 +92,13 @@ export async function sendVerificationEmail({
     return { devLogged: true, sent: false };
   }
 
-  const logoAttachment = await getEmailLogoInlineAttachment();
+  const { logoUrl, attachment } = await resolveEmailLogoForSend();
   const html = buildVerificationEmailHtml({
     fullName,
     code,
     expiresMinutes,
-    logoCid: logoAttachment?.cid ?? null,
+    logoUrl,
+    logoCid: attachment?.cid ?? null,
   });
   const text = `קוד האימות שלך בדינמיקר: ${code}\nהקוד תקף ${expiresMinutes} דקות.`;
 
@@ -116,7 +117,7 @@ export async function sendVerificationEmail({
     subject: "קוד אימות — דינמיקר",
     text,
     html,
-    attachments: logoAttachment ? [logoAttachment] : [],
+    attachments: attachment ? [attachment] : [],
   });
 
   console.info(

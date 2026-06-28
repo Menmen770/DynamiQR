@@ -73,10 +73,6 @@ export default function LoginScreen({ navigation }) {
 
       const data = await parseJsonResponse(response);
       if (!response.ok) {
-        if (response.status === 403 && data?.needsEmailVerification && data?.email) {
-          navigation.navigate("VerifyEmail", { email: data.email });
-          return;
-        }
         throw new Error(data.error || "ההתחברות נכשלה");
       }
 
