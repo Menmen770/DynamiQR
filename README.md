@@ -46,21 +46,6 @@
 ```bash
 cd mobile
 npm install
-```
-
-צרו קובץ `mobile/.env` לפי `mobile/.env.example`:
-
-```env
-EXPO_PUBLIC_API_URL=http://192.168.1.0:5000
-```
-
-- **אמולטור / מכשיר באותה רשת:** החליפו ב-IP המקומי של המחשב (`ipconfig` ב-Windows).
-- **מכשיר פיזי מרחוק:** השתמשו ב-`npm run phone` (tunnel) או בכתובת ה-Backend הציבורית (Render).
-
-הרצה:
-
-```bash
-cd mobile
 npm start
 # או
 npm run android
@@ -436,55 +421,6 @@ npm start
 | Frontend      | `http://localhost:5173`  |
 | Backend       | `http://localhost:5000`  |
 | Mobile (Expo) | QR בטרמינל / `exp://...` |
-
----
-
-## פריסה חינמית (Render) כדי ש-QR דינמי יעבוד גם בטלפון
-
-כדי שסריקה מהטלפון תעבוד, ה-QR הדינמי חייב להפנות לכתובת ציבורית (לא `localhost`).
-
-### 1) פריסת Backend ל-Render
-
-הפרויקט כולל `render.yaml` בשורש — ניתן לפרוס ישירות מ-GitHub.
-
-ב-Render:
-
-1. `New +` → `Blueprint`
-2. בחרו את הריפו
-3. אשרו יצירת `dynamiqr-backend`
-4. הגדירו Environment Variables (לפחות):
-   - `MONGO_URI` (Mongo Atlas)
-   - `SESSION_SECRET`
-   - `JWT_SECRET`
-   - `FRONTEND_URL` (דומיין הפרונט)
-   - `BACKEND_URL` (דומיין ה-Render)
-
-### 2) הגדרת Frontend לדומיין הציבורי
-
-צרו `frontend/.env` לפי `frontend/.env.example`:
-
-```env
-VITE_API_URL=https://your-backend-domain.onrender.com
-VITE_PUBLIC_QR_BASE=https://your-backend-domain.onrender.com
-```
-
-בנו והעלו את ה-frontend מחדש.
-
-### 3) הגדרת אפליקציית המובייל לפרודקשן
-
-ב-`mobile/.env`:
-
-```env
-EXPO_PUBLIC_API_URL=https://your-backend-domain.onrender.com
-```
-
-### 4) בדיקה מהירה מהטלפון
-
-1. מייצרים QR דינמי חדש (אתר או אפליקציה).
-2. מוודאים שהקישור נראה כמו:  
-   `https://your-backend-domain.onrender.com/api/r/<slug>`
-3. סורקים מהטלפון — הפניה ליעד ועדכון סטטיסטיקה.
-4. משנים יעד ל-QR קיים ובודקים שהסריקה הבאה מפנה ליעד החדש.
 
 ---
 
