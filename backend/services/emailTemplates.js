@@ -1,6 +1,5 @@
-import { EMAIL_LOGO_CID } from "./emailLogo.js";
-
 const BRAND_PRIMARY = "#0a9396";
+const EMAIL_LOGO_CID = "dynamiqr-logo";
 const BRAND_DARK = "#005f73";
 const BRAND_BG = "#f0fafa";
 

@@ -1,5 +1,12 @@
 import crypto from "crypto";
-import { buildEncodedQrText } from "./buildEncodedQrText.js";
+import {
+  buildEncodedQrText,
+  buildDynamicRedirectTarget,
+} from "./buildEncodedQrText.js";
+import {
+  isWhatsAppAppLink,
+  upgradeWaMeToWhatsAppApp,
+} from "./whatsappRedirect.js";
 
 export const MAX_TARGET_URL = 2048;
 
@@ -27,7 +34,8 @@ export function normalizeRedirectTarget(raw) {
       p === "https:" ||
       p === "mailto:" ||
       p === "tel:" ||
-      p === "sms:"
+      p === "sms:" ||
+      p === "whatsapp:"
     ) {
       return u.toString();
     }
@@ -40,6 +48,8 @@ export function normalizeRedirectTarget(raw) {
 export function resolveTargetFromSavedDoc(doc) {
   const ex = String(doc?.dynamicTargetUrl || "").trim();
   if (ex) {
+    const waApp = upgradeWaMeToWhatsAppApp(ex);
+    if (waApp) return waApp;
     const http = normalizeTargetUrl(ex);
     if (http) return http;
     const fromExplicit = normalizeRedirectTarget(ex);
@@ -47,7 +57,7 @@ export function resolveTargetFromSavedDoc(doc) {
   }
   const type = doc?.qrType || "url";
   const inputs = doc?.qrInputs && typeof doc.qrInputs === "object" ? doc.qrInputs : {};
-  const built = String(buildEncodedQrText(type, inputs) || "").trim();
+  const built = String(buildDynamicRedirectTarget(type, inputs) || "").trim();
   return normalizeRedirectTarget(built);
 }
 

@@ -19,51 +19,43 @@ export default function QrTypeSelectorMobile({ colors, qrType, onSelectType }) {
   const renderTypeBtn = (type) => {
     const active = qrType === type.value;
     const IconComponent = type.icon;
-    const content = (
+    const inner = (
       <>
         <IconComponent
           size={16}
           color={active ? "#ffffff" : colors.subText}
           strokeWidth={1.75}
         />
-        <Text style={[styles.btnLabel, active && styles.btnLabelActive]}>
+        <Text
+          style={[styles.btnLabel, active && styles.btnLabelActive]}
+          numberOfLines={1}
+        >
           {type.label}
         </Text>
       </>
     );
-
-    if (active) {
-      return (
-        <TouchableOpacity
-          key={type.value}
-          onPress={() => onSelectType(type.value)}
-          activeOpacity={0.9}
-          accessibilityLabel={`סוג QR: ${type.label}`}
-          accessibilityState={{ selected: true }}
-          style={styles.btnWrap}
-        >
-          <LinearGradient
-            colors={["#0a9396", "#087b7d"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.btnActive}
-          >
-            {content}
-          </LinearGradient>
-        </TouchableOpacity>
-      );
-    }
 
     return (
       <TouchableOpacity
         key={type.value}
         onPress={() => onSelectType(type.value)}
         activeOpacity={0.85}
+        style={styles.cell}
         accessibilityLabel={`סוג QR: ${type.label}`}
-        accessibilityState={{ selected: false }}
-        style={styles.btn}
+        accessibilityState={{ selected: active }}
       >
-        {content}
+        {active ? (
+          <LinearGradient
+            colors={["#0a9396", "#087b7d"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.btnInner}
+          >
+            {inner}
+          </LinearGradient>
+        ) : (
+          <View style={[styles.btnInner, styles.btnInnerIdle]}>{inner}</View>
+        )}
       </TouchableOpacity>
     );
   };
@@ -159,36 +151,29 @@ const createStyles = (colors) =>
     grid: {
       flexDirection: "row-reverse",
       flexWrap: "wrap",
-      gap: 8,
+      marginHorizontal: -4,
     },
-    btnWrap: {
-      width: "47%",
-      borderRadius: 12,
-      overflow: "hidden",
+    cell: {
+      width: "50%",
+      padding: 4,
     },
-    btn: {
-      width: "47%",
+    btnInner: {
       flexDirection: "row-reverse",
       alignItems: "center",
       gap: 6,
       paddingHorizontal: 10,
       paddingVertical: 10,
       borderRadius: 12,
+      minHeight: 44,
+    },
+    btnInnerIdle: {
       backgroundColor: colors.card,
       borderWidth: 1,
       borderColor: colors.border,
     },
-    btnActive: {
-      flexDirection: "row-reverse",
-      alignItems: "center",
-      gap: 6,
-      paddingHorizontal: 10,
-      paddingVertical: 10,
-      borderRadius: 12,
-      width: "100%",
-    },
     btnLabel: {
       flex: 1,
+      flexShrink: 1,
       fontSize: 13,
       fontWeight: "600",
       color: colors.text,

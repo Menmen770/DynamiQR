@@ -19,6 +19,7 @@ mobile/.expo/
 # Build outputs
 dist/
 build/
+backend/assets/email/logo-email.png
 *.log
 
 # IDE

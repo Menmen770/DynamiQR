@@ -38,8 +38,6 @@ const darkColors = {
 const AccessibilityContext = createContext(null);
 
 export function AccessibilityProvider({ children }) {
-  const [fontSize, setFontSizeState] = useState("normal");
-  const [readableFont, setReadableFontState] = useState(false);
   const [darkMode, setDarkModeState] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
@@ -49,9 +47,6 @@ export function AccessibilityProvider({ children }) {
         const raw = await AsyncStorage.getItem(STORAGE_KEY);
         if (raw) {
           const data = JSON.parse(raw);
-          if (data.fontSize) setFontSizeState(data.fontSize);
-          if (typeof data.readableFont === "boolean")
-            setReadableFontState(data.readableFont);
           if (typeof data.darkMode === "boolean") setDarkModeState(data.darkMode);
         }
       } catch (e) {
@@ -62,49 +57,18 @@ export function AccessibilityProvider({ children }) {
     })();
   }, []);
 
-  const persist = async (data) => {
-    try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      const current = raw ? JSON.parse(raw) : {};
-      const next = { ...current, ...data };
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch (e) {
-      console.warn("Accessibility persist error:", e);
-    }
-  };
-
-  const setFontSize = (size) => {
-    setFontSizeState(size);
-    persist({ fontSize: size });
-  };
-
-  const setReadableFont = (value) => {
-    setReadableFontState(value);
-    persist({ readableFont: value });
-  };
-
   const setDarkMode = (value) => {
     setDarkModeState(value);
-    persist({ darkMode: value });
-  };
-
-  const reset = () => {
-    setFontSizeState("normal");
-    setReadableFontState(false);
-    setDarkModeState(false);
-    persist({ fontSize: "normal", readableFont: false, darkMode: false });
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ darkMode: value })).catch(
+      (e) => console.warn("Accessibility persist error:", e),
+    );
   };
 
   const colors = darkMode ? darkColors : lightColors;
 
   const value = {
-    fontSize,
-    readableFont,
     darkMode,
-    setFontSize,
-    setReadableFont,
     setDarkMode,
-    reset,
     colors,
     loaded,
   };

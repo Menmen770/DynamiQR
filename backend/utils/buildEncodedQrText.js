@@ -1,6 +1,18 @@
 /**
  * מקביל ל־frontend/src/utils/qrEncodedText.js — לחישוב יעד דינמי בשרת.
  */
+
+/** קישור ישיר לאפליקציית WhatsApp (לא wa.me בדפדפן). */
+export function buildWhatsAppAppLink(phone, message) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (!digits) return "";
+  const params = new URLSearchParams();
+  params.set("phone", digits);
+  const msg = message != null ? String(message) : "";
+  if (msg) params.set("text", msg);
+  return `whatsapp://send?${params.toString()}`;
+}
+
 export function buildEncodedQrText(type, inputs) {
   const safe = inputs && typeof inputs === "object" ? inputs : {};
   const t = type || "url";
@@ -61,4 +73,20 @@ export function buildEncodedQrText(type, inputs) {
     default:
       return String(safe.url || "").trim();
   }
+}
+
+/**
+ * יעד להפניה דינמית (302 / דף מעבר) — WhatsApp נפתח באפליקציה, לא בדפדפן.
+ */
+export function buildDynamicRedirectTarget(type, inputs) {
+  const safe = inputs && typeof inputs === "object" ? inputs : {};
+  const t = type || "url";
+  if (t === "whatsapp") {
+    const phone = String(safe.whatsapp?.phone || "").replace(/\D/g, "");
+    const msg =
+      safe.whatsapp?.message != null ? String(safe.whatsapp.message) : "";
+    if (!phone) return "";
+    return buildWhatsAppAppLink(phone, msg);
+  }
+  return buildEncodedQrText(t, inputs);
 }

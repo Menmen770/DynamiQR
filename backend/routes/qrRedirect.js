@@ -7,13 +7,13 @@ import {
   isValidSlug,
   normalizeSlugParam,
 } from "../utils/dynamicQr.js";
+import {
+  isWhatsAppAppLink,
+  whatsAppAppRedirectHtml,
+} from "../utils/whatsappRedirect.js";
+import { inferCountryCode } from "../utils/inferCountryCode.js";
 
 const router = express.Router();
-const COUNTRY_HEADER_KEYS = [
-  "cf-ipcountry",
-  "x-vercel-ip-country",
-  "x-country-code",
-];
 
 const PAUSED_HTML = `<!DOCTYPE html>
 <html lang="he" dir="rtl">
@@ -75,17 +75,6 @@ function detectOsFromUserAgent(uaRaw) {
   return "other";
 }
 
-function inferCountryCode(req) {
-  for (const key of COUNTRY_HEADER_KEYS) {
-    const v = String(req.headers[key] || "").trim().toUpperCase();
-    if (/^[A-Z]{2}$/.test(v)) return v;
-  }
-  const lang = String(req.headers["accept-language"] || "");
-  const m = lang.match(/-[A-Za-z]{2}\b/);
-  if (m) return m[0].slice(1).toUpperCase();
-  return "UN";
-}
-
 router.get("/r/:slug", qrRedirectLimiter, async (req, res) => {
   const slugNorm = normalizeSlugParam(req.params.slug);
   if (!isValidSlug(slugNorm)) {
@@ -129,6 +118,12 @@ router.get("/r/:slug", qrRedirectLimiter, async (req, res) => {
       console.warn("QR redirect: scanCount update matched 0 docs", doc._id);
     }
     if (target) {
+      if (isWhatsAppAppLink(target)) {
+        const html = whatsAppAppRedirectHtml(target);
+        if (html) {
+          return res.status(200).type("html").send(html);
+        }
+      }
       res.statusCode = 302;
       res.setHeader("Location", target);
       return res.end();
