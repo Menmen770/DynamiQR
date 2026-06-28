@@ -14,7 +14,8 @@ const API_PORT = 5000;
 /** @type {string|null} דוגמה: "192.168.1.34" — רק אם אין .env */
 const CUSTOM_IP = null;
 
-const AUTH_TOKEN_KEY = "qrMasterAuthJwt";
+const AUTH_TOKEN_KEY = "dynamiqrAuthJwt";
+const LEGACY_AUTH_TOKEN_KEY = "qrMasterAuthJwt";
 
 function getEnvApiBaseUrl() {
   try {
@@ -85,7 +86,15 @@ export function getDynamicQrRedirectBase() {
 
 export async function getStoredAuthToken() {
   try {
-    return await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) return token;
+    const legacy = await AsyncStorage.getItem(LEGACY_AUTH_TOKEN_KEY);
+    if (legacy) {
+      await AsyncStorage.setItem(AUTH_TOKEN_KEY, legacy);
+      await AsyncStorage.removeItem(LEGACY_AUTH_TOKEN_KEY);
+      return legacy;
+    }
+    return null;
   } catch {
     return null;
   }

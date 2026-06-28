@@ -1,13 +1,13 @@
 /** מפתח אחיד להיסטוריית QR אחרונה (localStorage). */
-export const QR_CREATOR_RECENT_KEY = "qrCreatorRecentQrHistory";
+export const DYNAMIQR_RECENT_KEY = "dynamiqrRecentHistory";
 
-const LEGACY_RECENT_QR_KEY = "qrMasterRecentHistory";
+const LEGACY_RECENT_KEYS = ["qrCreatorRecentQrHistory", "qrMasterRecentHistory"];
 
 export function loadRecentQrItems() {
   try {
     const raw =
-      localStorage.getItem(QR_CREATOR_RECENT_KEY) ??
-      localStorage.getItem(LEGACY_RECENT_QR_KEY);
+      localStorage.getItem(DYNAMIQR_RECENT_KEY) ??
+      LEGACY_RECENT_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
     return JSON.parse(raw || "[]");
   } catch {
     return [];
@@ -15,5 +15,5 @@ export function loadRecentQrItems() {
 }
 
 export function saveRecentQrItems(items) {
-  localStorage.setItem(QR_CREATOR_RECENT_KEY, JSON.stringify(items));
+  localStorage.setItem(DYNAMIQR_RECENT_KEY, JSON.stringify(items));
 }

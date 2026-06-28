@@ -23,7 +23,8 @@ import {
   createEmptyQrInputs,
 } from "../utils/qrEncodedTextMobile";
 
-const RECENT_QR_KEY = "qrMasterRecentHistory";
+const RECENT_QR_KEY = "dynamiqrRecentHistory";
+const LEGACY_RECENT_QR_KEYS = ["qrMasterRecentHistory", "qrCreatorRecentQrHistory"];
 const DEBOUNCE_MS = 450;
 
 function setNestedInput(prev, path, value) {
@@ -205,7 +206,13 @@ export function useQrGeneratorMobile(initialPayload, previewCaptureRef) {
           value: text,
           createdAt: new Date().toISOString(),
         };
-        const raw = await AsyncStorage.getItem(RECENT_QR_KEY);
+        let raw = await AsyncStorage.getItem(RECENT_QR_KEY);
+        if (!raw) {
+          for (const legacyKey of LEGACY_RECENT_QR_KEYS) {
+            raw = await AsyncStorage.getItem(legacyKey);
+            if (raw) break;
+          }
+        }
         const existing = raw ? JSON.parse(raw) : [];
         const deduped = existing.filter(
           (item) => !(item.type === entry.type && item.value === entry.value),

@@ -17,7 +17,7 @@ export default function ContactScreen() {
         </Text>
         <View style={styles.card}>
           <Text style={styles.label}>אימייל</Text>
-          <Text style={styles.value}>support@qrmaster.app</Text>
+          <Text style={styles.value}>dynamiqr@gmail.com</Text>
         </View>
         <View style={styles.card}>
           <Text style={styles.label}>שעות מענה</Text>

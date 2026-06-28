@@ -184,7 +184,7 @@ npm start
 
 1. `New +` → `Blueprint`
 2. בחרו את הריפו
-3. אשרו יצירת `qr-code-creator-backend`
+3. אשרו יצירת `dynamiqr-backend`
 4. הגדירו Environment Variables (לפחות):
    - `MONGO_URI` (Mongo Atlas)
    - `SESSION_SECRET`
@@ -265,7 +265,7 @@ EXPO_PUBLIC_API_URL=https://your-backend-domain.onrender.com
 ## מבנה הפרויקט
 
 ```
-QR-code-creator/
+DynamiQR/
 ├── frontend/          # React + Vite — אתר
 ├── backend/           # Express + MongoDB — API
 ├── mobile/            # Expo — אפליקציית Android

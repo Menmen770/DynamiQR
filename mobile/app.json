@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "דינמיקר",
-    "slug": "qr-code-creator-mobile",
+    "slug": "dynamiqr-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -32,7 +32,7 @@
       ]
     ],
     "android": {
-      "package": "com.qrcodecreator.mobile",
+      "package": "com.dynamiqr.mobile",
       "supportsRtl": true
     }
   }
