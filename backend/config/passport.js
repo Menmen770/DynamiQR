@@ -27,6 +27,7 @@ const oauthCallback = (provider) => async (accessToken, refreshToken, profile, d
         passwordHash: null,
         oauthProvider: provider,
         oauthId: profile.id,
+        emailVerified: true,
       });
     }
     return done(null, user);

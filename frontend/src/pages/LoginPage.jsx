@@ -70,6 +70,12 @@ function LoginPage() {
 
       const data = await response.json();
       if (!response.ok) {
+        if (response.status === 403 && data?.needsEmailVerification) {
+          navigate(
+            `/verify-email?email=${encodeURIComponent(data.email || form.email)}`,
+          );
+          return;
+        }
         throw new Error(data.error || "ההתחברות נכשלה");
       }
 

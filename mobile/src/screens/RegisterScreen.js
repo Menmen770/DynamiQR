@@ -82,8 +82,17 @@ export default function RegisterScreen({ navigation }) {
       );
 
       const data = await parseJsonResponse(response);
-      if (!response.ok) {
+      if (!response.ok && !data?.needsEmailVerification) {
         throw new Error(data.error || "ההרשמה נכשלה");
+      }
+
+      if (data.needsEmailVerification) {
+        navigation.replace("VerifyEmail", {
+          email: data.email || form.email,
+          emailDelivery: data.emailDelivery || "smtp",
+          deliveryMessage: data.message || "",
+        });
+        return;
       }
 
       await refreshUser(data.user, data.token);

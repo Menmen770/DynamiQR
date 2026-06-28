@@ -250,6 +250,8 @@ EXPO_PUBLIC_API_URL=https://your-backend-domain.onrender.com
 
 ## API עיקרי
 
+**תיעוד מלא (להגשה):** [`backend/API.md`](backend/API.md)
+
 - `POST /api/generate-qr`
 - `POST /api/auth/register`
 - `POST /api/auth/login`

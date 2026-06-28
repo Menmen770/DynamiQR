@@ -251,6 +251,10 @@ router.get("/saved-qrs", requireAuth, async (req, res) => {
       50,
       Math.max(1, parseInt(String(req.query.limit || "20"), 10) || 20),
     );
+    const skip = Math.max(
+      0,
+      parseInt(String(req.query.skip || "0"), 10) || 0,
+    );
     const qRaw =
       typeof req.query.q === "string" ? req.query.q.trim() : "";
     const filter = { userId: req.userId };
@@ -262,9 +266,10 @@ router.get("/saved-qrs", requireAuth, async (req, res) => {
     }
     const items = await SavedQr.find(filter)
       .sort({ createdAt: -1 })
+      .skip(skip)
       .limit(limit)
       .lean();
-    res.json({ items });
+    res.json({ items, skip, limit });
   } catch (err) {
     console.error("List saved QR error:", err);
     res.status(500).json({ error: "Failed to list saved QR codes" });
@@ -486,13 +491,63 @@ router.get("/saved-qrs/:id/stats", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Invalid id" });
   }
   try {
-    const doc = await SavedQr.findOne({ _id: id, userId: req.userId }).lean();
+    const doc = await SavedQr.findOne({ _id: id, userId: req.userId })
+      .populate("userId", "fullName email")
+      .lean();
     if (!doc) {
       return res.status(404).json({ error: "Not found" });
     }
     const events = Array.isArray(doc.scanEvents) ? doc.scanEvents : [];
+    const userObjectId = new mongoose.Types.ObjectId(String(req.userId));
+    const qrObjectId = new mongoose.Types.ObjectId(id);
+
+    const [osAgg, countryAgg] = await Promise.all([
+      SavedQr.aggregate([
+        { $match: { _id: qrObjectId, userId: userObjectId } },
+        { $unwind: "$scanEvents" },
+        {
+          $group: {
+            _id: {
+              $cond: [
+                { $in: ["$scanEvents.os", ["ios", "android"]] },
+                "$scanEvents.os",
+                "other",
+              ],
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+      ]),
+      SavedQr.aggregate([
+        { $match: { _id: qrObjectId, userId: userObjectId } },
+        { $unwind: "$scanEvents" },
+        {
+          $group: {
+            _id: {
+              $toUpper: { $ifNull: ["$scanEvents.countryCode", "UN"] },
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { count: -1 } },
+        { $limit: 8 },
+      ]),
+    ]);
+
     const osCounts = { ios: 0, android: 0, other: 0 };
-    const countryCounts = new Map();
+    for (const row of osAgg) {
+      if (row._id === "ios" || row._id === "android" || row._id === "other") {
+        osCounts[row._id] = row.count;
+      }
+    }
+
+    const countryBreakdown = countryAgg.map((row) => ({
+      code: row._id,
+      label: countryNameFromCode(row._id),
+      count: row.count,
+    }));
+
     const daily = new Map();
 
     const now = new Date();
@@ -509,12 +564,6 @@ router.get("/saved-qrs/:id/stats", requireAuth, async (req, res) => {
     }
 
     for (const ev of events) {
-      const os = ev?.os === "ios" || ev?.os === "android" ? ev.os : "other";
-      osCounts[os] += 1;
-
-      const cc = String(ev?.countryCode || "UN").toUpperCase();
-      countryCounts.set(cc, (countryCounts.get(cc) || 0) + 1);
-
       const dayKey = statsDayKey(ev?.scannedAt);
       if (dayKey && daily.has(dayKey)) {
         daily.set(dayKey, (daily.get(dayKey) || 0) + 1);
@@ -532,15 +581,6 @@ router.get("/saved-qrs/:id/stats", requireAuth, async (req, res) => {
       { key: "other", label: "אחר", count: osCounts.other },
     ];
 
-    const countryBreakdown = Array.from(countryCounts.entries())
-      .map(([code, count]) => ({
-        code,
-        label: countryNameFromCode(code),
-        count,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 8);
-
     const dailySeries = last30Keys.map((date) => ({
       date,
       count: daily.get(date) || 0,
@@ -551,6 +591,9 @@ router.get("/saved-qrs/:id/stats", requireAuth, async (req, res) => {
       osBreakdown,
       countryBreakdown,
       dailySeries,
+      owner: doc.userId
+        ? { fullName: doc.userId.fullName, email: doc.userId.email }
+        : null,
     });
   } catch (err) {
     console.error("Saved QR stats error:", err);

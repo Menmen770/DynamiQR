@@ -78,6 +78,13 @@ function RegisterPage() {
         throw new Error(data.error || "ההרשמה נכשלה");
       }
 
+      if (data.needsEmailVerification) {
+        navigate(
+          `/verify-email?email=${encodeURIComponent(data.email || form.email)}`,
+        );
+        return;
+      }
+
       if (data?.token) {
         setAuthToken(data.token);
       }

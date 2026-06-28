@@ -34,6 +34,8 @@ import LoginScreen from "./src/screens/LoginScreen";
 
 import RegisterScreen from "./src/screens/RegisterScreen";
 
+import VerifyEmailScreen from "./src/screens/VerifyEmailScreen";
+
 import ContactScreen from "./src/screens/ContactScreen";
 
 import PrivacyScreen from "./src/screens/PrivacyScreen";
@@ -71,6 +73,8 @@ function AuthNavigator() {
     >
 
       <AuthStack.Screen name="Register" component={RegisterScreen} />
+
+      <AuthStack.Screen name="VerifyEmail" component={VerifyEmailScreen} />
 
       <AuthStack.Screen name="Login" component={LoginScreen} />
 

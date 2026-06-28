@@ -9,6 +9,14 @@ import {
   signAccessToken,
   getUserIdFromRequest,
 } from "../utils/authToken.js";
+import { sendVerificationEmail } from "../services/mailer.js";
+import {
+  generateVerificationCode,
+  hashVerificationCode,
+  verifyCodeHash,
+  verificationExpiryDate,
+  isVerificationExpired,
+} from "../utils/verificationCode.js";
 
 const router = express.Router();
 
@@ -16,6 +24,42 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isValidEmail(email) {
   return typeof email === "string" && EMAIL_RE.test(email.trim());
+}
+
+async function deliverVerificationEmail(user, verificationCode) {
+  let emailDelivery = "smtp";
+  try {
+    const mailResult = await sendVerificationEmail({
+      to: user.email,
+      fullName: user.fullName,
+      code: verificationCode,
+      expiresMinutes: 10,
+    });
+    if (mailResult?.devLogged) {
+      emailDelivery = "console";
+    } else if (!mailResult?.sent) {
+      emailDelivery = "failed";
+    }
+  } catch (mailErr) {
+    console.error("Verification email error:", mailErr);
+    emailDelivery = "failed";
+  }
+  return emailDelivery;
+}
+
+function buildVerificationRegisterResponse(email, emailDelivery) {
+  const message =
+    emailDelivery === "smtp"
+      ? "נשלח קוד אימות לכתובת האימייל שלך. הזן אותו כדי להשלים את ההרשמה."
+      : emailDelivery === "console"
+        ? "SMTP לא מוגדר — הקוד מודפס בקונסול השרת (מצב פיתוח)."
+        : "ההרשמה הצליחה אך שליחת המייל נכשלה. נסה 'שלח קוד מחדש'.";
+  return {
+    needsEmailVerification: true,
+    email,
+    emailDelivery,
+    message,
+  };
 }
 
 function redirectFrontendWithToken(res, userId) {
@@ -41,29 +85,52 @@ router.post("/auth/register", authLimiter, async (req, res) => {
   }
 
   try {
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (existingUser) {
-      return res.status(409).json({ error: "Email already exists" });
+    const existingUser = await User.findOne({ email: email.toLowerCase() }).select(
+      "+emailVerificationCodeHash +emailVerificationExpiresAt emailVerified passwordHash fullName email",
+    );
+    if (existingUser?.emailVerified) {
+      return res.status(409).json({ error: "כבר קיים חשבון עם אימייל זה" });
+    }
+    if (existingUser && !existingUser.passwordHash) {
+      return res.status(409).json({
+        error: "האימייל מקושר לחשבון גוגל/פייסבוק — התחבר דרך הרשת החברתית",
+      });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      fullName,
-      email: email.toLowerCase(),
-      passwordHash,
-    });
+    const verificationCode = generateVerificationCode();
 
-    req.session.userId = user._id.toString();
-    const token = signAccessToken(user._id.toString());
-    res.status(201).json({
-      user: {
-        id: user._id,
-        fullName: user.fullName,
-        email: user.email,
-      },
-      token,
-    });
+    let user;
+    if (existingUser) {
+      existingUser.fullName = fullName;
+      existingUser.emailVerified = false;
+      existingUser.emailVerificationCodeHash = hashVerificationCode(verificationCode);
+      existingUser.emailVerificationExpiresAt = verificationExpiryDate(10);
+      existingUser.$locals.plainPassword = password;
+      user = await existingUser.save();
+    } else {
+      user = new User({
+        fullName,
+        email: email.toLowerCase(),
+        emailVerified: false,
+        emailVerificationCodeHash: hashVerificationCode(verificationCode),
+        emailVerificationExpiresAt: verificationExpiryDate(10),
+      });
+      user.$locals.plainPassword = password;
+      await user.save();
+    }
+
+    const emailDelivery = await deliverVerificationEmail(user, verificationCode);
+
+    res.status(existingUser ? 200 : 201).json(
+      buildVerificationRegisterResponse(user.email, emailDelivery),
+    );
   } catch (err) {
+    if (err.name === "ValidationError") {
+      const msg = Object.values(err.errors)
+        .map((e) => e.message)
+        .join(", ");
+      return res.status(400).json({ error: msg });
+    }
     console.error("Register error:", err);
     res.status(500).json({ error: "Failed to register" });
   }
@@ -96,6 +163,14 @@ router.post("/auth/login", authLimiter, async (req, res) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    if (user.emailVerified === false) {
+      return res.status(403).json({
+        error: "יש לאמת את האימייל לפני ההתחברות",
+        needsEmailVerification: true,
+        email: user.email,
+      });
+    }
+
     req.session.userId = user._id.toString();
     const token = signAccessToken(user._id.toString());
     res.json({
@@ -109,6 +184,121 @@ router.post("/auth/login", authLimiter, async (req, res) => {
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ error: "Failed to login" });
+  }
+});
+
+router.post("/auth/verify-email", authLimiter, async (req, res) => {
+  const emailRaw = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+  const codeRaw = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+
+  if (!emailRaw || !codeRaw) {
+    return res.status(400).json({ error: "נדרשים אימייל וקוד אימות" });
+  }
+  if (!isValidEmail(emailRaw)) {
+    return res.status(400).json({ error: "אימייל לא תקין" });
+  }
+  if (!/^\d{6}$/.test(codeRaw)) {
+    return res.status(400).json({ error: "קוד האימות חייב להיות 6 ספרות" });
+  }
+
+  try {
+    const user = await User.findOne({ email: emailRaw.toLowerCase() }).select(
+      "+emailVerificationCodeHash +emailVerificationExpiresAt fullName email passwordHash emailVerified",
+    );
+    if (!user) {
+      return res.status(400).json({ error: "קוד אימות שגוי" });
+    }
+    if (user.emailVerified) {
+      req.session.userId = user._id.toString();
+      const token = signAccessToken(user._id.toString());
+      return res.json({
+        user: {
+          id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+        },
+        token,
+        alreadyVerified: true,
+      });
+    }
+    if (
+      !user.emailVerificationCodeHash ||
+      isVerificationExpired(user.emailVerificationExpiresAt)
+    ) {
+      return res.status(400).json({
+        error: "פג תוקף הקוד. בקש שליחה מחדש.",
+        expired: true,
+      });
+    }
+    if (!verifyCodeHash(codeRaw, user.emailVerificationCodeHash)) {
+      return res.status(400).json({ error: "קוד אימות שגוי" });
+    }
+
+    user.emailVerified = true;
+    user.emailVerificationCodeHash = undefined;
+    user.emailVerificationExpiresAt = undefined;
+    await user.save();
+
+    req.session.userId = user._id.toString();
+    const token = signAccessToken(user._id.toString());
+    res.json({
+      user: {
+        id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+      },
+      token,
+    });
+  } catch (err) {
+    console.error("Verify email error:", err);
+    res.status(500).json({ error: "אימות האימייל נכשל" });
+  }
+});
+
+router.post("/auth/resend-verification", authLimiter, async (req, res) => {
+  const emailRaw = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+  if (!emailRaw || !isValidEmail(emailRaw)) {
+    return res.status(400).json({ error: "אימייל לא תקין" });
+  }
+
+  try {
+    const user = await User.findOne({ email: emailRaw.toLowerCase() }).select(
+      "+emailVerificationCodeHash +emailVerificationExpiresAt fullName email passwordHash emailVerified",
+    );
+    if (!user || !user.passwordHash) {
+      return res.json({
+        ok: true,
+        message: "אם החשבון קיים, נשלח קוד אימות חדש.",
+      });
+    }
+    if (user.emailVerified) {
+      return res.status(400).json({ error: "האימייל כבר אומת" });
+    }
+
+    const verificationCode = generateVerificationCode();
+    user.emailVerificationCodeHash = hashVerificationCode(verificationCode);
+    user.emailVerificationExpiresAt = verificationExpiryDate(10);
+    await user.save();
+
+    try {
+      await sendVerificationEmail({
+        to: user.email,
+        fullName: user.fullName,
+        code: verificationCode,
+        expiresMinutes: 10,
+      });
+    } catch (mailErr) {
+      console.error("Resend verification email error:", mailErr);
+      return res.status(503).json({ error: "שליחת המייל נכשלה. נסה שוב מאוחר יותר." });
+    }
+
+    res.json({
+      ok: true,
+      message: "קוד אימות חדש נשלח לאימייל שלך",
+    });
+  } catch (err) {
+    console.error("Resend verification error:", err);
+    res.status(500).json({ error: "שליחה מחדש נכשלה" });
   }
 });
 
@@ -200,7 +390,7 @@ router.put("/auth/password", authLimiter, requireAuth, async (req, res) => {
     if (!match) {
       return res.status(401).json({ error: "הסיסמה הנוכחית שגויה" });
     }
-    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.$locals.plainPassword = newPassword;
     await user.save();
     res.json({ ok: true });
   } catch (err) {

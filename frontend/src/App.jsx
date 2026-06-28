@@ -4,6 +4,7 @@ import QrPage from "./pages/QrPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 import LearnQrPage from "./pages/LearnQrPage";
 import ContactPage from "./pages/ContactPage";
 import PrivacyTermsPage from "./pages/PrivacyTermsPage";
@@ -57,7 +58,9 @@ function ProtectedLayout() {
 function App() {
   const location = useLocation();
   const isAuthPage =
-    location.pathname === "/login" || location.pathname === "/register";
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
+    location.pathname === "/verify-email";
 
   return (
     <>
@@ -73,6 +76,7 @@ function App() {
 
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy-terms" element={<PrivacyTermsPage />} />
       </Routes>
